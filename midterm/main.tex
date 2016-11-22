@@ -1,0 +1,51 @@
+\documentclass[12pt,twocolumn,letterpaper]{article}
+
+\usepackage{cvpr}
+\usepackage{times}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[breaklinks=true,bookmarks=false]{hyperref}
+\usepackage{gensymb}
+\usepackage{subcaption}
+
+\cvprfinalcopy
+
+\def\httilde{\mbox{\tt\raisebox{-.5ex}{\symbol{126}}}}
+
+
+\setcounter{page}{1}
+\begin{document}
+
+\title{Visual Odometry on Smartphone}
+
+\author{Jai Prakash\\
+Carnegie Mellon University\\
+Master of Science in Computer Vision\\
+{\tt\small jprakash@andrew.cmu.edu}
+\and
+Utkarsh Sinha\\
+Carnegie Mellon University\\
+Master of Science in Computer Vision\\
+{\tt\small usinha@andrew.cmu.edu}
+}
+
+\maketitle
+
+\begin{abstract}
+In this project, we are trying to localize the camera using visual odometry. The major component of the project is to generate keyframes according to pre-defined heuristics and triangulate the points to create 3D reconstruction of the scene. The intermediate frames can be found using Perspective-n-point algorithm. In addition, we also perform local bundle adjustment over last few frames so that the localization is locally consistent. We also plan to exploit the onboard inertial sensors to get prior for the localization.
+\end{abstract}
+
+\section{Introduction}
+
+Augmented reality has been around for years, yet not all problems are solved in that domain. One of the challenges being precise localization of the device in the world. 
+    
+{\small{
+\begin{thebibliography}{15}
+
+\bibitem{Szeliski}
+Szeliski, Richard. \textit{Computer Vision: Algorithms and Applications}. 1st ed. London: Springer-Verlag, 2010. Print.
+
+\endgroup
+\end{document}
