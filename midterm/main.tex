@@ -46,18 +46,47 @@ In many of the Augmented Reality application, you do not have to understand the 
 \section{Background}
 \textbf{Visual SLAM vs. Visual Odometry: } The focus in the visual SLAM techniques is both in reconstruting the scene and also localizing the camera in the scene. However, our main focus is just in localization of the camera. For the scope of the project, we focus only to be locally consistent. So, our system might intrduce drift over time.
 
-
-\section{Method}
-Our system contains of the following blocks.
-\begin{itemize}
-\item \textbf{Feature Extraction and matching: } We have experimented with OpenCV KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames. 
-\end{itemize}
-
 \begin{figure}
 \includegraphics[width=0.5\textwidth]{images/system}
 \caption{A visualization of the Visual Odometry system}
 \label{fig:system}
 \end{figure}
+
+\section{Method}
+Our system contains of the following blocks.
+\begin{itemize}
+\item \textbf{Feature Extraction and matching: } We have experimented with OpenCV KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames. For AKAZE and ORB features, the correspondences are found using feature matching. The outliers are removed using the epi-polar constraints and finding unique matches i.e. feature from first image matches to a unique feature in second image and vice-versa.
+
+\item \textbf{3D reconstruction: } Using the feature matching, we can triagulate the points. The fundamental matrix gives the relationship between the feature points. We used 8-point algorithm to find the fundamental matrix.
+
+$$ p_2^T F p_1 = 0 $$
+
+The Essential matrix can be found using the equation (assuming the same camera intrinsics in both cameras)
+$$ E = K^T F K $$
+
+The essential matrix can be decomposed to rotation and translation component.
+$$ E = U\Sigma V^T $$
+$$ R = U W U^T $$
+$$ t = U \Sigma V^T $$
+
+This gives rise to four possible camera locations. The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
+
+\item \textbf{Camera pose recovery: } Once the scene is reconstructed using the keyframes, the camera pose can be recovered using Perspective-n-point (PnP) algorithms. By knowing the 3D points from the reconstruction, and its corresponding feature location in any image the camera pose can be recovered using PnP.
+
+\item \textbf{Bundle Adjustment: } In visual odometry, the current camera pose is
+obtained by adding the last observed motion to the
+current detection change. This leads to a super-
+linear increase in pose error over time. In this
+section, we look at the techniques we intend to
+use to correct this pose drift
+One solution is to use bundle adjustment to impose geometrical constraints over multiple
+frames. The computational cost increases with
+the cube of the number of frames used for com-
+putation. Thus, we limit the number of frames
+to a small window from the previously captured
+frames.
+
+\end{itemize}
 
 \begin{figure}
 \includegraphics[width=0.5\textwidth]{images/block}
@@ -67,8 +96,28 @@ Our system contains of the following blocks.
 
 
 \section{Results}
-So far, we have been working with the datasets available online. The results are illustrated on the Middlebury Temple dataset \cite{middlebury}. We are able to recosntruct the temple structure using the two keyframes (handpicked for now). Once the reconstruction is done, we are able to recover the camera poses as illustrated in the figure xxx
+So far, we have been working with the datasets available online. The results are illustrated on the Middlebury Temple dataset \cite{middlebury}. We first find the feature correspondences and then remove the outliers using Epipolar constraints. The outliers can be found by using a threshold on distance from epi-polar line and along the epipolar line.
 
+We are able to recosntruct the temple structure using the two keyframes (handpicked for now). The results are shown in figure \ref{fig:reconstruction}. Once the reconstruction is done, we are able to recover the camera poses using PnP algorithm as illustrated in the figure \ref{fig:pose}. We are using OpenCV for feature matching and visualization.
+
+
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{images/temple_correspondence}
+\caption{Temple correspondence using KLT features}
+\label{fig:correspondence}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{images/temple1}
+\caption{Temple reconstruction using keyframes}
+\label{fig:reconstruction}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{images/camera_pose}
+\caption{Recovered camera poses using PnP. The 3D points are obtained using keyframes. The camera pose is found using its corresponding feature in the image}
+\label{fig:pose}
+\end{figure}
 
 
 \section{Future Work}

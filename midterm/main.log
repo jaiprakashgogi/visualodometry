@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99992 (TeX Live 2015) (preloaded format=xelatex 2015.5.24)  22 NOV 2016 19:59
+This is XeTeX, Version 3.14159265-2.6-0.99992 (TeX Live 2015) (preloaded format=xelatex 2015.5.24)  22 NOV 2016 20:53
 entering extended mode
  \write18 enabled.
  %&-line parsing enabled.
@@ -413,25 +413,19 @@ LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <14.4> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 36.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 47.
-LaTeX Font Info:    Try loading font information for OMS+ptm on input line 53.
+File: images/system.png Graphic file (type QTm)
 
+<use  "images/system.png" >
+Overfull \hbox (11.29218pt too wide) in paragraph at lines 50--51
+[][] 
+ []
+
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 58.
 (/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/omsptm.fd
 File: omsptm.fd 
 )
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 53.
-File: images/system.png Graphic file (type QTm)
-
-<use  "images/system.png" >
-Overfull \hbox (11.29218pt too wide) in paragraph at lines 57--58
-[][] 
- []
-
-File: images/block.png Graphic file (type QTm)
-<use  "images/block.png" >
-Overfull \hbox (11.29218pt too wide) in paragraph at lines 63--64
-[][] 
- []
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 58.
 
 (/usr/local/texlive/2015/texmf-dist/tex/generic/oberdiek/se-ascii-print.def
 File: se-ascii-print.def 2011/12/02 v1.10 stringenc: Printable ASCII characters
@@ -441,32 +435,59 @@ File: se-ascii-print.def 2011/12/02 v1.10 stringenc: Printable ASCII characters
 
 
 ]
-Underfull \hbox (badness 10000) in paragraph at lines 89--90
+Underfull \hbox (badness 1033) in paragraph at lines 60--61
+[]\OT1/ptm/b/n/12 3D re-con-struc-tion:  \OT1/ptm/m/n/12 Us-ing the fea-ture
+ []
+
+File: images/block.png Graphic file (type QTm)
+<use  "images/block.png" >
+Overfull \hbox (11.29218pt too wide) in paragraph at lines 92--93
+[][] 
+ []
+
+File: images/temple_correspondence.png Graphic file (type QTm)
+<use  "images/temple_correspondence.png" >
+Overfull \hbox (11.29218pt too wide) in paragraph at lines 105--106
+[][] 
+ []
+
+File: images/temple1.png Graphic file (type QTm)
+<use  "images/temple1.png" >
+Overfull \hbox (11.29218pt too wide) in paragraph at lines 111--112
+[][] 
+ []
+
+File: images/camera_pose.png Graphic file (type QTm)
+<use  "images/camera_pose.png" >
+Overfull \hbox (11.29218pt too wide) in paragraph at lines 117--118
+[][] 
+ []
+
+[2]
+Underfull \hbox (badness 10000) in paragraph at lines 138--139
 []\OT1/ptm/m/n/10.95 Temple dataset []$\OT1/pcr/m/n/10.95 http : / / vision .
  []
 
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 92.
-[2
-
-]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 92.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 141.
+[3]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 141.
  (./main.aux)
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 92.
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 92.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 92.
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 141.
+Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 141.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 141.
  )
 (\end occurred inside a group at level 2)
 
-### simple group (level 2) entered at line 82 ({)
-### simple group (level 1) entered at line 82 ({)
+### simple group (level 2) entered at line 131 ({)
+### simple group (level 1) entered at line 131 ({)
 ### bottom level 
 Here is how much of TeX's memory you used:
- 10771 strings out of 493706
- 152449 string characters out of 6145769
- 230473 words of memory out of 5000000
- 14011 multiletter control sequences out of 15000+600000
- 18113 words of font info for 59 fonts, out of 8000000 for 9000
+ 10784 strings out of 493706
+ 152676 string characters out of 6145769
+ 231473 words of memory out of 5000000
+ 14021 multiletter control sequences out of 15000+600000
+ 19103 words of font info for 63 fonts, out of 8000000 for 9000
  1328 hyphenation exceptions out of 8191
- 42i,9n,40p,536b,396s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 42i,9n,40p,542b,400s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on main.pdf (2 pages).
+Output written on main.pdf (3 pages).
