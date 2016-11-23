@@ -48,12 +48,14 @@ In many such applications, understanding the scene is not important. Localizing 
 
 \begin{figure*}
     \centering
-    \begin{subfigure}{.4\textwidth}
+    \begin{subfigure}{.45\textwidth}
+    \centering
         \includegraphics[width=\textwidth]{images/system}
-        \caption{A visualization of the Visual Odometry system}
+        \caption{A visualization of the Visual Odometry system. The black frames are the key-frames. The orange frames are intermediate frames whose pose is found using PnP.}
         \label{fig:system}
     \end{subfigure}
-    \begin{subfigure}{.5\textwidth}
+    \begin{subfigure}{.45\textwidth}
+    \centering
         \includegraphics[width=\textwidth]{images/block}
         \caption{Block diagram of the system. The red blocks are implemented as a part of Geometry based vision project. For this project we are focusing on implementation of local bundle adjustment shown in green}
         \label{fig:block}
@@ -62,11 +64,13 @@ In many such applications, understanding the scene is not important. Localizing 
 
 \section{Method}
 
+We are using feature based sparse reconstruction to localize the camera. 
+
 \subsection{Feature Extraction and Matching}
 We have experimented with OpenCV KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames using optical flow. For AKAZE\cite{akaze} and ORB features, the correspondences are found using feature matching. The outliers are removed using the epipolar constraints and finding unique matches i.e. feature from first image matches to a unique feature in second image and vice-versa.
 
 \subsection{3D reconstruction}
-Using the feature matching, we can triagulate the points. The fundamental matrix gives the relationship between the feature points. We used 8-point algorithm to find the fundamental matrix.
+Using the feature matching, we can triagulate the points. The fundamental matrix gives the relationship between the feature points. We used RANSAC based 8-point algorithm to find the fundamental matrix.
 
 $$ \textbf{p}_2^T \textbf{Fp}_1 = 0 $$
 
@@ -75,10 +79,16 @@ $$ \textbf{E} = \textbf{K}^T \textbf{F} \textbf{K} $$
 
 The essential matrix can be decomposed to rotation and translation component.
 $$ \textbf{E} = \textbf{U}\Sigma \textbf{V}^T $$
-$$ \textbf{R} = \textbf{U} \textbf{W} \textbf{U}^T $$
-$$ \textbf{t} = \textbf{U} \Sigma \textbf{V}^T $$
+$$ \textbf{R} = \textbf{U} \textbf{W} \textbf{V}^T $$
+$$ [\textbf{t}]_\times = \textbf{U} \Sigma \textbf{U}^T $$
 
-This gives rise to four possible camera locations. The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
+where $\textbf{W} = \begin{bmatrix}
+0 & 1 & 0\\
+-1 & 0 & 0\\
+0& 0 & 1
+\end{bmatrix} $
+
+This gives rise to four possible camera configurations (with $W$/$W^T$ and $\pm t$). The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
 
 \subsection{Camera pose recovery}
 Once the scene is reconstructed using the keyframes, the camera pose can be recovered using Perspective-n-point (PnP) algorithms. By knowing the 3D points from the reconstruction, and its corresponding feature location in any image the camera pose can be recovered using PnP.
@@ -118,7 +128,7 @@ We are able to recosntruct the temple structure using the two keyframes (handpic
 
 
 \section{Future Work}
-Until now, we have evaluated the the various landmark tracking techniques on the Temple dataset. We intend to test the different techniques across multiple datasets and pick an algorithm that works best.
+Until now, we have evaluated the various landmark tracking techniques on the Temple dataset. We intend to test the different techniques across multiple datasets and pick an algorithm that works best.
 
 We will integrate Ceres solver by Google for local bundle adjustment. This would improve the localization of the camera and generate a better tracking of the scene.
 
