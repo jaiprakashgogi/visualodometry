@@ -6,16 +6,16 @@
 // Description : Hello World in C++, Ansi-style
 //============================================================================
 
-#include <iostream>
-
-#include "cmusfm.h"
-using namespace std;
+#include "VisualOdometry.h"
+#include "Frame.h"
 
 int main() {
+
+#if 0
 	namedWindow("LK", 1);
 	string prefix = "/Users/jaiprakashgogi/workspace/mscv-nea/data/temple/";
-	float intrinsic[] = { 1520.400000, 0.000000, 302.320000, 0.000000,
-			1525.900000, 246.870000, 0.000000, 0.000000, 1.000000 };
+	float intrinsic[] = {1520.400000, 0.000000, 302.320000, 0.000000,
+		1525.900000, 246.870000, 0.000000, 0.000000, 1.000000};
 
 	// Initialize Viz
 	viz::Viz3d myWindow("Coordinate Frame");
@@ -53,13 +53,36 @@ int main() {
 		Affine3f cam_pose = viz::makeCameraPose(
 				cam2_t, cam_focal_point ,
 				cam2_R_vec);
-		viz::WCameraPosition cpw(0.5); // Coordinate axes
-		viz::WCameraPosition cpw_frustum(Vec2f(0.889484, 0.523599)); // Camera frustum
+		viz::WCameraPosition cpw(0.5);// Coordinate axes
+		viz::WCameraPosition cpw_frustum(Vec2f(0.889484, 0.523599));// Camera frustum
 		myWindow.showWidget("CPW", cpw, cam_pose);
 		myWindow.spinOnce(1, true);
 		if ((char) waitKey(0) == 27) {
 			break;
 		}
 	}
+#endif
+
+	string path =
+			"/Users/jaiprakashgogi/workspace/visualodometry/dataset/dataset/sequences/00/image_0/";
+	vector<string> filenames = get_image_path(path);
+
+	//Initialize Map
+
+	// For every frame, check if its a keyframe
+	// Insert to Map if keyframe
+
+	for(auto f:filenames) {
+		Frame* frame = new Frame(f);
+		frame->extractFeatures();
+		frame->matchFeatures();
+		//frame->setKeyFrame();
+		//Mat T_frame = frame->findPose();
+		waitKey(0);
+		cout << f << endl;
+	}
+
+
+
 	return 0;
 }

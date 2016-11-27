@@ -16,9 +16,16 @@
 #include <opencv2/viz/vizcore.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
+using namespace std;
+using namespace cv;
+
 class KeyFrame {
+	Frame* frame;
+	vector<Mat> points3D;
+	//vector<desc> descriptors;
+	Mat R, t;
 public:
-	KeyFrame();
+	KeyFrame(Frame* frame);
 	virtual ~KeyFrame();
 };
 
