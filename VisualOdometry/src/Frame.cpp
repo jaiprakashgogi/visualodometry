@@ -10,6 +10,8 @@
 Frame::Frame(string filename) {
 	// TODO Auto-generated constructor stub
 	frame = imread(filename);
+	this->filename = filename;
+	imshow("frame", frame);
 	kf = NULL;
 }
 
@@ -18,6 +20,7 @@ Frame::~Frame() {
 }
 
 Mat& Frame::getFrame() {
+	cout << __func__ << ": " << getFileName() << endl;
 	return frame;
 }
 
@@ -87,7 +90,8 @@ void Frame::symmetryTest(const vector<vector<DMatch> >& matches1,
 Mat Frame::ransacTest(const vector<DMatch>& matches,
 		const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
 		vector<DMatch>& outMatches, vector<Point2f>& points1,
-		vector<Point2f>& points2) {
+		vector<Point2f>& points2, vector<KeyPoint>& inlier1,
+		vector<KeyPoint>& inlier2, vector<DMatch>& good_matches) {
 	bool refineF = true;
 	double distance = 3.0;
 	double confidence = 0.99;
@@ -132,6 +136,7 @@ Mat Frame::ransacTest(const vector<DMatch>& matches,
 			for (std::vector<cv::DMatch>::const_iterator it =
 					outMatches.begin(); it != outMatches.end(); ++it) {
 				// Get the position of left keypoints
+				int new_i = static_cast<int>(inlier1.size());
 				float x = keypoints1[it->queryIdx].pt.x;
 				float y = keypoints1[it->queryIdx].pt.y;
 				points1.push_back(cv::Point2f(x, y));
@@ -139,6 +144,9 @@ Mat Frame::ransacTest(const vector<DMatch>& matches,
 				x = keypoints2[it->trainIdx].pt.x;
 				y = keypoints2[it->trainIdx].pt.y;
 				points2.push_back(cv::Point2f(x, y));
+				inlier1.push_back(keypoints1[it->queryIdx]);
+				inlier2.push_back(keypoints1[it->trainIdx]);
+				good_matches.push_back(DMatch(new_i, new_i, 0));
 			}
 			// Compute 8-point F from all accepted matches
 			if (points1.size() > 0 && points2.size() > 0) {
@@ -151,9 +159,20 @@ Mat Frame::ransacTest(const vector<DMatch>& matches,
 	return fundamental;
 }
 
-void Frame::matchFeatures() {
+vector<vector<Point2f>> Frame::matchFeatures(Frame* frame2) {
+	vector<vector<Point2f>> result;
+	bool isStereo = false;
+	if (frame2 == NULL) {
+		frame2 = kf->getFrame();
+		//cout << __func__ << "frame2 Null - reading keyframe: " << frame2->getFileName() << endl;
+	} else {
+		isStereo = true;
+	}
+	if (frame2 == NULL) {
+		cout << "Frame does not have KeyFrame" << endl;
+		return result;
+	}
 
-	Frame* frame2 = kf->getFrame();
 	vector<KeyPoint> kpts2 = frame2->getKeyPoints();
 	Mat desc2 = frame2->getDesc();
 	BFMatcher matcher(NORM_HAMMING);
@@ -167,21 +186,111 @@ void Frame::matchFeatures() {
 	// clean scene image -> object image matches
 	removed = ratioTest(matches2);
 
-	vector<DMatch> symMatches;
-	symmetryTest(matches1, matches2, symMatches);
+	//vector<DMatch> symMatches;
+	symmetryTest(matches1, matches2, matches);
 	// 5. Validate matches using RANSAC
-	vector<DMatch> matches; // output matches
 	vector<Point2f> points1; // output object keypoints (Point2f)
 	vector<Point2f> points2;
-	F = ransacTest(symMatches, kpts, kpts2, matches, points1, points2);
+#if 0
+	vector<DMatch> matches; // output matches
+	vector<KeyPoint> in1;
+	vector<KeyPoint> in2;
+	vector<DMatch> good_matches;
+	F = ransacTest(symMatches, kpts, kpts2, matches, points1, points2, in1, in2, good_matches);
+	Mat res;
+	drawMatches(frame, kpts, frame2->getFrame(), kpts2, symMatches, res);
+#else
+	stackPoints(matches, kpts, kpts2, points1, points2);
 	Mat res;
 	drawMatches(frame, kpts, frame2->getFrame(), kpts2, matches, res);
+	cout << __func__ << ": " << matches.size() << endl;
+#endif
+	imshow("res", res);
+	result.push_back(points1);
+	result.push_back(points2);
+	return result;
+}
+
+void Frame::stackPoints(const vector<DMatch>& matches,
+		const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
+		vector<Point2f>& points1, vector<Point2f>& points2) {
+	for (std::vector<cv::DMatch>::const_iterator it = matches.begin();
+			it != matches.end(); ++it) {
+		// Get the position of left keypoints
+		float x = keypoints1[it->queryIdx].pt.x;
+		float y = keypoints1[it->queryIdx].pt.y;
+		points1.push_back(cv::Point2f(x, y));
+		// Get the position of right keypoints
+		x = keypoints2[it->trainIdx].pt.x;
+		y = keypoints2[it->trainIdx].pt.y;
+		points2.push_back(cv::Point2f(x, y));
+	}
 }
 
 Mat& Frame::getPose() {
 	//Get the pose of the Frame using PnP
+
+	Frame* key_frame = kf->getFrame();
+	imshow("KeyFrame", key_frame->getFrame());
+	vector<DMatch> curr_matches = matches;
+	vector<DMatch> key_matches = key_frame->getMatches();
+	int size_kpts = key_frame->getKeyPoints().size();
+	cout << __func__ << " : " << size_kpts << " xx " << key_matches.size()
+			<< " xx " << curr_matches.size() << endl;
+
+	vector<int> flag_key(size_kpts, -1);
+	vector<int> flag_curr(size_kpts, -1);
+	int i = 0;
+	for (auto it : key_matches) {
+		flag_key[it.queryIdx] = i++;
+	}
+	for (auto it : curr_matches) {
+		flag_curr[it.trainIdx] = it.queryIdx;
+	}
+
+	// check for float or double
+	vector<Point2f> corresp_2d;
+	vector<Point3f> corresp_3d;
+	Mat points3d = kf->get3DPoints();
+
+	for (int i = 0; i < size_kpts; i++) {
+		if (flag_key[i] >= 0 && flag_curr[i] >= 0) {
+			int id_3d = flag_key[i];
+			corresp_3d.push_back(
+					Point3f(points3d.at<float>(id_3d, 0),
+							points3d.at<float>(id_3d, 1),
+							points3d.at<float>(id_3d, 2)));
+			int id_2d = flag_curr[i];
+			corresp_2d.push_back(
+					Point2f(this->kpts[id_2d].pt.x, this->kpts[id_2d].pt.y));
+		}
+	}
+
+
+	cout << corresp_3d.size() << " -- " << corresp_2d.size() << endl;
+
 }
 
+vector<KeyPoint> Frame::getKeyPoints() {
+	return kpts;
+}
+
+Mat& Frame::getDesc() {
+	return desc;
+}
 bool Frame::isKeyFrame() {
+	//Find the error using Homography and decide if it's a keyFrame?
 	return false;
+}
+
+void Frame::setKeyFrame(KeyFrame * kf) {
+	this->kf = kf;
+}
+
+string Frame::getFileName() {
+	return filename;
+}
+
+vector<DMatch>& Frame::getMatches() {
+	return matches;
 }

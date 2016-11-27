@@ -15,7 +15,7 @@
 using namespace std;
 
 class Map {
-	vector<KeyFrame> keyFrames;
+	vector<KeyFrame *> keyFrames;
 public:
 	Map();
 	void InitializeMap();

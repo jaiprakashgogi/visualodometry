@@ -66,23 +66,43 @@ int main() {
 	string path =
 			"/Users/jaiprakashgogi/workspace/visualodometry/dataset/dataset/sequences/00/image_0/";
 	vector<string> filenames = get_image_path(path);
+	// Initialize Viz
+	viz::Viz3d myWindow("Coordinate Frame");
+	myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
 
 	//Initialize Map
 
 	// For every frame, check if its a keyframe
 	// Insert to Map if keyframe
+	bool isFirstFrame = true;
+	KeyFrame* curr_kf = NULL;
+	KeyFrame* prev_kf = NULL;
 
-	for(auto f:filenames) {
+	for (int i = 0; i < filenames.size(); i++) {
+		string f = filenames.at(i);
 		Frame* frame = new Frame(f);
+		frame->setKeyFrame(curr_kf);
 		frame->extractFeatures();
-		frame->matchFeatures();
+		if (i % 5 == 0) {
+			prev_kf = curr_kf;
+			curr_kf = new KeyFrame(frame);
+			//curr_kf->reconstructFromPrevKF();
+			Mat points3D = curr_kf->stereoReconstruct();
+			viz::WCloud cloud_widget(points3D, viz::Color::green());
+			myWindow.showWidget("3D view", cloud_widget);
+			myWindow.spinOnce(1, true);
+		} else {
+			//Frame should have keyFrame before matching
+			cout << i << endl;
+			frame->matchFeatures();
+			frame->getPose();
+		}
 		//frame->setKeyFrame();
 		//Mat T_frame = frame->findPose();
-		waitKey(0);
-		cout << f << endl;
+		if (waitKey(0) == int('q')) {
+			break;
+		}
 	}
-
-
 
 	return 0;
 }

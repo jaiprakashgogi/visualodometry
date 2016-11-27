@@ -24,13 +24,17 @@
 using namespace std;
 using namespace cv;
 
+class KeyFrame;
+
 class Frame {
 	KeyFrame* kf;
-	Mat& frame;
+	Mat frame;
+	string filename;
 	vector<KeyPoint> kpts;
-	Mat& desc;
+	Mat desc;
 	Mat F; //Fundamental Matrix
 	Mat T;
+	vector<DMatch> matches;
 	int ratioTest(std::vector<std::vector<cv::DMatch> > &matches);
 	void symmetryTest(const vector<vector<DMatch> >& matches1,
 			const vector<vector<DMatch> >& matches2,
@@ -38,16 +42,25 @@ class Frame {
 	Mat ransacTest(const vector<DMatch>& matches,
 			const vector<KeyPoint>& keypoints1,
 			const vector<KeyPoint>& keypoints2, vector<DMatch>& outMatches,
+			vector<Point2f>& points1, vector<Point2f>& points2,
+			vector<KeyPoint>& inlier1, vector<KeyPoint>& inlier2,
+			vector<DMatch>& good_matches);
+	void stackPoints(const vector<DMatch>& matches,
+			const vector<KeyPoint>& keypoints1,
+			const vector<KeyPoint>& keypoints2,
 			vector<Point2f>& points1, vector<Point2f>& points2);
 public:
 	Frame(string filename);
 	Mat& getFrame();
 	void extractFeatures();
-	void matchFeatures();
-	vector<KeyPoint>* getKeyPoints();
+	vector<vector<Point2f>> matchFeatures(Frame* frame = NULL);
+	vector<KeyPoint> getKeyPoints();
+	void setKeyFrame(KeyFrame* kf);
+	vector<DMatch>& getMatches();
 	Mat& getDesc();
 	Mat& getPose();
 	bool isKeyFrame();
+	string getFileName();
 	virtual ~Frame();
 };
 
