@@ -93,12 +93,14 @@ int main() {
 		} else {
 			//Frame should have keyFrame before matching
 			cout << i << endl;
-			frame->matchFeatures();
+			vector<vector<Point2f>> matches = frame->matchFeatures();
 			Mat T = frame->getPose();
+			//Mat T = frame->getCameraPose(matches);
+			cout << T << endl;
 			Mat M1 = frame->getKeyFrame()->getProjectionMat();
 			Mat K = M1(Rect(0, 0, 3, 3));
 			Affine3d cam_pose = Affine3d(T);
-			viz::WCameraPosition camPos((Matx33d) K, frame->getFrame(), 10.0,
+			viz::WCameraPosition camPos((Matx33d) K, frame->getFrame(), 5.0,
 					viz::Color::red());
 			myWindow.showWidget("CPW1", camPos, cam_pose);
 			myWindow.spinOnce(1, true);

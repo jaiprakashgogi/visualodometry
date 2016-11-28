@@ -39,15 +39,8 @@ class Frame {
 	void symmetryTest(const vector<vector<DMatch> >& matches1,
 			const vector<vector<DMatch> >& matches2,
 			vector<DMatch>& symMatches);
-	Mat ransacTest(const vector<DMatch>& matches,
-			const vector<KeyPoint>& keypoints1,
+	Mat ransacTest(const vector<DMatch>& matches, const vector<KeyPoint>& keypoints1,
 			const vector<KeyPoint>& keypoints2, vector<DMatch>& outMatches,
-			vector<Point2f>& points1, vector<Point2f>& points2,
-			vector<KeyPoint>& inlier1, vector<KeyPoint>& inlier2,
-			vector<DMatch>& good_matches);
-	void stackPoints(const vector<DMatch>& matches,
-			const vector<KeyPoint>& keypoints1,
-			const vector<KeyPoint>& keypoints2,
 			vector<Point2f>& points1, vector<Point2f>& points2);
 public:
 	Frame(string filename);
@@ -59,6 +52,7 @@ public:
 	vector<DMatch>& getMatches();
 	Mat& getDesc();
 	Mat& getPose();
+	Mat& getCameraPose(vector<vector<Point2f>> matches);
 	bool isKeyFrame();
 	string getFileName();
 	KeyFrame* getKeyFrame();
