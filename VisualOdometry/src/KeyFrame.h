@@ -37,6 +37,7 @@ public:
 	void registerKeyFrame();
 	Mat stereoReconstruct();
 	Mat get3DPoints();
+	Mat getProjectionMat();
 	virtual ~KeyFrame();
 };
 

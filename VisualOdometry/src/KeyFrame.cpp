@@ -33,6 +33,10 @@ Frame* KeyFrame::getFrame() {
 	return frame;
 }
 
+Mat KeyFrame::getProjectionMat() {
+	return M1;
+}
+
 Mat KeyFrame::stereoReconstruct() {
 	cout << __func__ << endl;
 	Frame* left_frame = frame;

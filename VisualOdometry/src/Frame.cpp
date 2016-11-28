@@ -229,14 +229,10 @@ void Frame::stackPoints(const vector<DMatch>& matches,
 
 Mat& Frame::getPose() {
 	//Get the pose of the Frame using PnP
-
 	Frame* key_frame = kf->getFrame();
-	imshow("KeyFrame", key_frame->getFrame());
 	vector<DMatch> curr_matches = matches;
 	vector<DMatch> key_matches = key_frame->getMatches();
 	int size_kpts = key_frame->getKeyPoints().size();
-	cout << __func__ << " : " << size_kpts << " xx " << key_matches.size()
-			<< " xx " << curr_matches.size() << endl;
 
 	vector<int> flag_key(size_kpts, -1);
 	vector<int> flag_curr(size_kpts, -1);
@@ -267,8 +263,28 @@ Mat& Frame::getPose() {
 	}
 
 
-	cout << corresp_3d.size() << " -- " << corresp_2d.size() << endl;
+	// Find the camera Pose using RANSAC PnP
+	int iterationsCount = 1000;        // number of Ransac iterations.
+	float reprojectionError = 2.0; // maximum allowed distance to consider it an inlier.
+	float confidence = 0.95;
+	Mat M1 = kf->getProjectionMat();
+	Mat _A_matrix = M1(Rect(0,0, 3,3));
+	Mat distCoeffs = Mat::zeros(4, 1, CV_64FC1); // vector of distortion coefficients
+	Mat rvec = Mat::zeros(3, 1, CV_64FC1);     // output rotation vector
+	Mat tvec = Mat::zeros(3, 1, CV_64FC1);  // output translation vector
+	bool useExtrinsicGuess = false;
 
+	solvePnPRansac(Mat(corresp_3d), Mat(corresp_2d), _A_matrix, distCoeffs, rvec, tvec,
+			useExtrinsicGuess, iterationsCount, reprojectionError, confidence);
+	Mat R;
+	Rodrigues(rvec, R); // R is 3x3
+	R = R.t();  // rotation of inverse
+	tvec = -R.t() * tvec; // translation of inverse
+	T = Mat::eye(4, 4, R.type()); // T is 4x4
+	T(Range(0, 3), Range(0, 3)) = R * 1; // copies R into T
+	T(Range(0, 3), Range(3, 4)) = tvec * 1; // copies tvec into T
+	//cout << T << endl;
+	return T;
 }
 
 vector<KeyPoint> Frame::getKeyPoints() {
@@ -293,4 +309,8 @@ string Frame::getFileName() {
 
 vector<DMatch>& Frame::getMatches() {
 	return matches;
+}
+
+KeyFrame* Frame::getKeyFrame() {
+	return kf;
 }

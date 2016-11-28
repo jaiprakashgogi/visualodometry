@@ -61,6 +61,7 @@ public:
 	Mat& getPose();
 	bool isKeyFrame();
 	string getFileName();
+	KeyFrame* getKeyFrame();
 	virtual ~Frame();
 };
 
