@@ -2,7 +2,7 @@
  * Map.cpp
  *
  *  Created on: Nov 26, 2016
- *      Author: jaiprakashgogi
+ *      Author: jaiprakashgogi, Utkarsh Sinha
  */
 
 #include "Map.h"

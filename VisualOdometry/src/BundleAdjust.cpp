@@ -12,8 +12,8 @@ struct CostFunctor {
 
     template<typename T> bool operator()(const T* const camera, const T* const pts, T* residual) const {
         // x^{i}_j = P_i X_j
-        T x0 = camera[0]*pts[0] + camera[1]*pts[1] + camera[2]*pts[2] + camera[3];
-        T x1 = camera[4]*pts[0] + camera[5]*pts[1] + camera[6]*pts[2] + camera[7];
+        T x0 = camera[0]*pts[0] + camera[1]*pts[1] +  camera[2]*pts[2] + camera[3];
+        T x1 = camera[4]*pts[0] + camera[5]*pts[1] +  camera[6]*pts[2] + camera[7];
         T x2 = camera[8]*pts[0] + camera[9]*pts[1] + camera[10]*pts[2] + T(1);
 
         // Reprojection error da - what da
@@ -50,7 +50,7 @@ void BundleAdjust::allocate2dPoints() {
 
 void BundleAdjust::setCameraCount(int i) {
     this->num_cameras = i;
-    this->camera_matrices = new double[11*i];
+    this->camera_matrices = new double[12*i];
 
     allocate2dPoints();
 }
@@ -63,7 +63,7 @@ void BundleAdjust::setPointCount(int i) {
 }
 
 void BundleAdjust::setInitialCameraEstimate(int i, double* camera) {
-    memcpy(&this->camera_matrices[i*11], camera, sizeof(double)*11);
+    memcpy(&this->camera_matrices[i*12], camera, sizeof(double)*12);
 }
 
 void BundleAdjust::setInitialPoint3d(int j, double* pt) {
@@ -91,7 +91,7 @@ void BundleAdjust::execute() const {
 
     // Build the optimization
     for(int i=0;i<num_3d_points;i++) {
-        double* point3d;  // the 3D point i
+        double* point3d = &(this->point_3d[i*3]);  // the 3D point i
         for(int j=0;j<num_cameras;j++) {
             // TODO check if 3D point i is visible in camera j
             bool visible = false;
@@ -112,10 +112,10 @@ void BundleAdjust::execute() const {
             // observation y of 3D point i in camera j
             double observed_y = this->point_2d[j*stride+i+1]; 
 
-            double* camera = &this->camera_matrices[j*11];    // the camera matrix for camera j
+            double* camera = &this->camera_matrices[j*12];    // the camera matrix for camera j
 
             // Every keypoint in each image is a cost function
-            ceres::CostFunction *cost_function = new ceres::AutoDiffCostFunction<CostFunctor, 1, 11, 3>(new CostFunctor(observed_x, observed_y));
+            ceres::CostFunction *cost_function = new ceres::AutoDiffCostFunction<CostFunctor, 1, 12, 3>(new CostFunctor(observed_x, observed_y));
             problem.AddResidualBlock(cost_function, nullptr, camera, point3d);
         }
     }
@@ -125,6 +125,8 @@ void BundleAdjust::execute() const {
     options.minimizer_progress_to_stdout = true;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
+
+    cout << summary.FullReport() << endl;
 
     return;
 }

@@ -58,6 +58,7 @@ public:
 	string getFileName();
 	KeyFrame* getKeyFrame();
 	virtual ~Frame();
+    void getObservedCorrespondingTo3DPoints(double*);
 };
 
 #endif /* FRAME_H_ */
