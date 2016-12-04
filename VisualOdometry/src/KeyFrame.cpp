@@ -2,12 +2,12 @@
  * KeyFrame.cpp
  *
  *  Created on: Nov 21, 2016
- *      Author: jaiprakashgogi
+ *      Author: jaiprakashgogi, Utkarsh Sinha
  */
 
 #include "KeyFrame.h"
 
-KeyFrame::KeyFrame(Frame* frame) {
+KeyFrame::KeyFrame(int timestamp, Frame* frame) : timestamp(timestamp) {
 	// TODO Auto-generated constructor stub
 	this->frame = frame;
 	M1 = Mat(
@@ -46,12 +46,13 @@ Mat KeyFrame::stereoReconstruct() {
 	string right_file = left_file.replace(left_file.find(key), key.size(),
 			"image_1");
 
-	Frame* right_frame = new Frame(right_file);
+	Frame* right_frame = new Frame(timestamp, right_file);
 	right_frame->extractFeatures();
 	vector<vector<Point2f>> pts = left_frame->matchFeatures(right_frame);
 // extract matches from the images
 	vector<Point2f> pts1 = pts.at(0);
 	vector<Point2f> pts2 = pts.at(1);
+
 //	cout << pts1.size() << endl;
 //	for(int i=0; i<pts1.size(); i++) {
 //		cout << pts1.at(i).x << "x" << pts1.at(i).y << " ---" <<
@@ -69,4 +70,7 @@ Mat KeyFrame::stereoReconstruct() {
 
 Mat KeyFrame::get3DPoints() {
 	return point3D;
+}
+void KeyFrame::reconstructFromPrevKF(KeyFrame *prev_kf) {
+    return;
 }

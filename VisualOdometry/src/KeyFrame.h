@@ -2,7 +2,7 @@
  * KeyFrame.h
  *
  *  Created on: Nov 21, 2016
- *      Author: jaiprakashgogi
+ *      Author: jaiprakashgogi, Utkarsh Sinha
  */
 
 #ifndef KEYFRAME_H_
@@ -31,14 +31,18 @@ class KeyFrame {
 	Mat T;
 	Mat M1, M2;
 	Mat point3D;
+    int timestamp;
+
 public:
-	KeyFrame(Frame* frame);
+	KeyFrame(int, Frame* frame);
 	Frame* getFrame();
 	void registerKeyFrame();
 	Mat stereoReconstruct();
 	Mat get3DPoints();
 	Mat getProjectionMat();
 	virtual ~KeyFrame();
+
+    void reconstructFromPrevKF(KeyFrame *prev_kf);
 };
 
 #endif /* KEYFRAME_H_ */
