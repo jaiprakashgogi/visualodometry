@@ -124,8 +124,11 @@ int main(int argc, char* argv[]) {
     //exit(0);
 
     google::InitGoogleLogging(argv[0]);
-    
+#if defined(IS_MAC)
+	string path = "/Users/jaiprakashgogi/workspace/visualodometry/dataset/dataset/sequences/00/image_0/";
+#else
 	string path = "/media/usinha/Utkarsh's HDD/datasets/kitti/00/image_0/";
+#endif
 	vector<string> filenames = get_image_path(path);
 
 	// Initialize Viz
