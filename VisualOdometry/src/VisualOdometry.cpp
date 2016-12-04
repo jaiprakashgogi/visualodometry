@@ -179,12 +179,12 @@ int main(int argc, char* argv[]) {
 			//Mat T = frame->getCameraPose(matches);
 			cout << T << endl;
 			Mat M1 = frame->getKeyFrame()->getProjectionMat();
-
+#if !defined(IS_MAC)
             BundleAdjust badj;
             constructBundleAdjustment(badj, prev_frame_history);
             badj.execute();
-
             exit(0);
+#endif
 
 			Mat K = M1(Rect(0, 0, 3, 3));
 			Affine3d cam_pose = Affine3d(T);
@@ -199,12 +199,13 @@ int main(int argc, char* argv[]) {
             viewer_tform.at<double>(2, 3) = 1;
             viewer_tform.at<double>(3, 3) = 1;
             Affine3d viewer_pose = Affine3d(viewer_tform) * cam_pose;
-            myWindow.setViewerPose(viewer_pose);
+            //myWindow.setViewerPose(viewer_pose);
 		}
-
-		/*if (waitKey(0) == int('q')) {
+#if defined(IS_MAC)
+		if (waitKey(0) == int('q')) {
 			break;
-		}*/
+		}
+#endif
 	}
 
 	return 0;
