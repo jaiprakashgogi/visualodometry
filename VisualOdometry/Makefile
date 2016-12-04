@@ -44,4 +44,5 @@ main.o: src/VisualOdometry.cpp
 	$(CC) $(CCFLAGS) -c $? -o $@ $(CCLIBS) $(CCINC)
 
 clean:
-	rm -rf VisualOdometry
+	rm *.o
+	rm VisualOdometry
