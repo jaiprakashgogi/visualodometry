@@ -207,55 +207,6 @@ vector<vector<Point2f>> Frame::matchFeatures(Frame* frame2,
 	return result;
 }
 
-vector<vector<Point2f>> Frame::matchFeatures(Frame* frame2) {
-    //cout << "matchFeatures on timestamp " << timestamp << endl;
-
-    vector<vector<Point2f>> result;
-    Frame* frame1;
-    if (frame2 == NULL) {
-        frame2 = this;
-        frame1 = kf->getFrame();
-    } else {
-        frame1 = this;
-    }
-    if (frame2 == NULL) {
-        cout << "Frame does not have KeyFrame" << endl;
-        return result;
-    }
-
-    vector<KeyPoint> kpts1 = frame1->getKeyPoints();
-    Mat desc1 = frame1->getDesc();
-    vector<KeyPoint> kpts2 = frame2->getKeyPoints();
-    Mat desc2 = frame2->getDesc();
-
-    BFMatcher matcher(NORM_HAMMING);
-    vector<vector<DMatch>> matches1;
-    matcher.knnMatch(desc1, desc2, matches1, 3);
-
-    vector<vector<DMatch>> matches2;
-    matcher.knnMatch(desc2, desc1, matches2, 2);
-
-    int removed = ratioTest(matches1);
-    removed = ratioTest(matches2);
-
-    vector<DMatch> symMatches;
-    symmetryTest(matches1, matches2, symMatches);
-
-    // 5. Validate matches using RANSAC
-    vector<Point2f> points1;
-    vector<Point2f> points2;
-    vector<DMatch> good_matches;
-    F = ransacTest(symMatches, kpts1, kpts2, matches, points1, points2);
-
-    Mat res;
-    drawMatches(frame1->getFrame(), kpts1, frame2->getFrame(), kpts2, matches,
-            res);
-    imshow("res", res);
-    result.push_back(points1);
-    result.push_back(points2);
-    return result;
-}
-
 Mat& Frame::getCameraPose(vector<vector<Point2f>> pts) {
     vector<Point2f> curr_pts = pts.at(0);
     vector<Point2f> keyf_pts = pts.at(1);
