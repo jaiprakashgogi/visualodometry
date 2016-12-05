@@ -145,6 +145,8 @@ int main(int argc, char* argv[]) {
 	viz::Viz3d myWindow("Coordinate Frame");
 	myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
 
+    Mat K
+
 	//Initialize Map
 	Map* GlobalMap = new Map();
 
@@ -198,27 +200,34 @@ int main(int argc, char* argv[]) {
 			Mat T = frame->getPose();
 			//Mat T = frame->getCameraPose(matches);
 			Mat M1 = frame->getKeyFrame()->getProjectionMat();
-#if defined(IS_MAC)
-			BundleAdjust badj;
-			constructBundleAdjustment(badj, prev_frame_history);
-			badj.execute();
+#if !defined(IS_MAC)
+            BundleAdjust badj;
+            constructBundleAdjustment(badj, prev_frame_history);
+            badj.execute();
+
+            // Copy over the poses we calculated
+            for(int yo=0;yo<prev_frame_history.size();yo++) {
+                Mat T;
+                badj.getAdjustedCameraMatrix(yo, T);
+
+                prev_frame_history[yo]->setPose(T);
+            }
 #endif
 
 			Mat K = M1(Rect(0, 0, 3, 3));
 			Affine3d cam_pose = Affine3d(T);
-			viz::WCameraPosition camPos((Matx33d) K, frame->getFrame(), 5.0,
-					viz::Color::red());
-			myWindow.showWidget("CPW1", camPos, cam_pose);
-			myWindow.spinOnce(1, true);
+			viz::WCameraPosition camPos((Matx33d) K, frame->getFrame(), 5.0, viz::Color::red());
+			//myWindow.showWidget("CPW1", camPos, cam_pose);
 
-			Mat viewer_tform(4, 4, CV_64FC1);
-			viewer_tform(Range(0, 3), Range(0, 3)) = Mat::eye(3, 3, CV_64FC1);
-			viewer_tform.at<double>(0, 3) = 1;
-			viewer_tform.at<double>(1, 3) = 1;
-			viewer_tform.at<double>(2, 3) = 1;
-			viewer_tform.at<double>(3, 3) = 1;
-			Affine3d viewer_pose = Affine3d(viewer_tform) * cam_pose;
-			//myWindow.setViewerPose(viewer_pose);
+            Mat viewer_tform(4, 4, CV_64FC1);
+            viewer_tform(Range(0, 3), Range(0, 3)) = Mat::eye(3, 3, CV_64FC1);
+            viewer_tform.at<double>(0, 3) = 1;
+            viewer_tform.at<double>(1, 3) = 1;
+            viewer_tform.at<double>(2, 3) = 1;
+            viewer_tform.at<double>(3, 3) = 1;
+            Affine3d viewer_pose = Affine3d(viewer_tform) * cam_pose;
+            myWindow.setViewerPose(viewer_pose);
+			myWindow.spinOnce(1, true);
 		}
 #if defined(IS_MAC)
 		if (waitKey(0) == int('q')) {

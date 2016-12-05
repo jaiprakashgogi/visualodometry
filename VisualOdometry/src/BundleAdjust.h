@@ -29,6 +29,8 @@ public:
     void setInitialPoint2d(int cami, int ptj, double x, double y);
     void allocate2dPoints();
 
+    void getAdjustedCameraMatrix(int i, cv::Mat& cam);
+
 private:
     int num_cameras = 0;
     int num_3d_points = 0;

@@ -53,6 +53,7 @@ public:
 	vector<DMatch>& getMatches();
 	Mat& getDesc();
 	Mat& getPose();
+    void setPose(const Mat& pose);
 	Mat& getCameraPose(vector<vector<Point2f>> matches);
 	bool isKeyFrame();
 	string getFileName();

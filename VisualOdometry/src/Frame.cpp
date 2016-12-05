@@ -490,7 +490,22 @@ void Frame::getObservedCorrespondingTo3DPoints(double* ret) {
     return;
 }
 
+void Frame::setPose(const Mat& pose) {
+    if(pose.rows != 4 && pose.cols!=4) {
+        cout << "Invalid pose dimensions" << endl;
+        return;
+    }
+
+    T = Mat(pose);
+    return;
+}
+
 Mat& Frame::getPose() {
+    if(T.data != nullptr) {
+        cout << " returning the already existing pose" << endl;
+        return T;
+    }
+
     // Get the pose of the Frame using PnP
     Frame* key_frame = kf->getFrame();
     vector<DMatch> curr_matches = matches;

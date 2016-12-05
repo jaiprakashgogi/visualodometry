@@ -5,6 +5,8 @@
  *      Author: Utkarsh Sinha, jaiprakashgogi
  */
 
+// TODO optimize in SE3
+
 #include "BundleAdjust.h"
 
 struct CostFunctor {
@@ -163,4 +165,23 @@ void BundleAdjust::execute() const {
     cout << summary.FullReport() << endl;
 
     return;
+}
+
+void BundleAdjust::getAdjustedCameraMatrix(int i, cv::Mat& cam) {
+    if(cam.data == nullptr) {
+        cam = cv::Mat::eye(4, 4, CV_64FC1);
+    }
+
+    cam.at<double>(0, 0) = this->camera_matrices[i*12+0];
+    cam.at<double>(0, 1) = this->camera_matrices[i*12+1];
+    cam.at<double>(0, 2) = this->camera_matrices[i*12+2];
+    cam.at<double>(0, 3) = this->camera_matrices[i*12+3];
+    cam.at<double>(1, 0) = this->camera_matrices[i*12+4];
+    cam.at<double>(1, 1) = this->camera_matrices[i*12+5];
+    cam.at<double>(1, 2) = this->camera_matrices[i*12+6];
+    cam.at<double>(1, 3) = this->camera_matrices[i*12+7];
+    cam.at<double>(2, 0) = this->camera_matrices[i*12+8];
+    cam.at<double>(2, 1) = this->camera_matrices[i*12+9];
+    cam.at<double>(2, 2) = this->camera_matrices[i*12+10];
+    cam.at<double>(2, 3) = this->camera_matrices[i*12+11];
 }
