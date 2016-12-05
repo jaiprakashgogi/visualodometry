@@ -25,9 +25,9 @@ class Frame;
 
 class KeyFrame {
 	Frame* frame;
-	//KeyFrame* prev_keyFrame;
+	KeyFrame* prev_kf;
 	//vector<Mat> points3D;
-	Mat T_prev;
+	vector<Frame*> frameVec;
 	Mat T;
 	Mat M1, M2;
 	Mat point3D;
@@ -40,6 +40,11 @@ public:
 	Mat stereoReconstruct();
 	Mat get3DPoints();
 	Mat getProjectionMat();
+	vector<Mat> getCommon3DPoints();
+	void setPrevKeyFrame(KeyFrame* prev_kf);
+	void setGlobalTransformation(Mat T);
+	void addFrames(Frame* frame);
+	KeyFrame* getPrevKeyFrame();
 	virtual ~KeyFrame();
 
     void reconstructFromPrevKF(KeyFrame *prev_kf);

@@ -47,7 +47,7 @@ public:
 	Frame(int, string filename);
 	Mat& getFrame();
 	void extractFeatures();
-	vector<vector<Point2f>> matchFeatures(Frame* frame=NULL);
+	vector<vector<Point2f>> matchFeatures(Frame* frame=NULL, vector<DMatch> *match = NULL);
 	vector<KeyPoint> getKeyPoints();
 	void setKeyFrame(KeyFrame* kf);
 	vector<DMatch>& getMatches();

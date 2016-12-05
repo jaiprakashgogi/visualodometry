@@ -12,6 +12,7 @@
 
 #include "cmusfm.h"
 #include "BundleAdjust.h"
+#include "Map.h"
 
 //#include <filesystem>
 #include <boost/filesystem.hpp>

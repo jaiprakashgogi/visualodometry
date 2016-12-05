@@ -15,10 +15,13 @@
 using namespace std;
 
 class Map {
-	vector<KeyFrame *> keyFrames;
+	vector<KeyFrame *> mapkeyFrames;
+	Mat getTfromCommon3D(vector<Mat> _points3d);
 public:
 	Map();
-	void InitializeMap();
+	int getNumKeyFrames();
+	void insertKeyFrame(KeyFrame* kf);
+	void registerCurrentKeyFrame();
 	virtual ~Map();
 };
 
