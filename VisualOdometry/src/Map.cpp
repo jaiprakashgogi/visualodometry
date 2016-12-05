@@ -9,6 +9,9 @@
 
 Map::Map() {
 	// TODO Auto-generated constructor stub
+	// Initialize Viz
+	myWindow = viz::Viz3d("Coordinate Frame");
+	myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
 
 }
 
@@ -72,4 +75,17 @@ Mat Map::getTfromCommon3D(vector<Mat> _points3d) {
 	T(Range(0, 3), Range(3, 4)) = _t * 1;
 	//cout << __LINE__ << T << R << _t << endl;
 	return T;
+}
+
+void Map::renderCurrentKF() {
+	int current_id = mapkeyFrames.size() - 1;
+	Mat points3D = mapkeyFrames.at(current_id)->get3DPoints();
+	viz::WCloud cloud_widget(points3D, viz::Color::green());
+	myWindow.showWidget("3D view", cloud_widget);
+	myWindow.spinOnce(1, true);
+}
+
+void Map::renderCurrentCamera(viz::WCameraPosition camPos, Affine3d cam_pose) {
+	myWindow.showWidget("CPW1", camPos, cam_pose);
+	myWindow.spinOnce(1, true);
 }

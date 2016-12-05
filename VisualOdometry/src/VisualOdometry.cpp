@@ -31,105 +31,108 @@ void printArray(double* arr, uint32_t count) {
 	cout << "-----------------------------------" << endl;
 }
 
-void constructBundleAdjustment(BundleAdjust& badj, vector<Frame*> frame_history) {
-    // Get the number of cameras
-    uint32_t num_cameras = frame_history.size();
+void constructBundleAdjustment(BundleAdjust& badj,
+		vector<Frame*> frame_history) {
+	// Get the number of cameras
+	uint32_t num_cameras = frame_history.size();
 
-    // Get the number of 3D points
-    KeyFrame* kf = frame_history[0]->getKeyFrame();
-    uint32_t num_3d_points = kf->get3DPoints().rows;
+	// Get the number of 3D points
+	KeyFrame* kf = frame_history[0]->getKeyFrame();
+	uint32_t num_3d_points = kf->get3DPoints().rows;
 
-    // Setup the camera projection matrices
-    Mat M1(kf->getProjectionMat());
+	// Setup the camera projection matrices
+	Mat M1(kf->getProjectionMat());
 
-    // We just duplicate the camera projection matrix (hopefully it won't change much)
-    const uint32_t camera_mat_size = 12;
-    double *cameras = new double[num_cameras*camera_mat_size];
-    cameras[ 0] = M1.at<double>(0, 0);
-    cameras[ 1] = M1.at<double>(0, 1);
-    cameras[ 2] = M1.at<double>(0, 2);
-    cameras[ 3] = M1.at<double>(0, 3);
-    cameras[ 4] = M1.at<double>(1, 0);
-    cameras[ 5] = M1.at<double>(1, 1);
-    cameras[ 6] = M1.at<double>(1, 2);
-    cameras[ 7] = M1.at<double>(1, 3);
-    cameras[ 8] = M1.at<double>(2, 0);
-    cameras[ 9] = M1.at<double>(2, 1);
-    cameras[10] = M1.at<double>(2, 2);
-    cameras[11] = M1.at<double>(2, 3);
+	// We just duplicate the camera projection matrix (hopefully it won't change much)
+	const uint32_t camera_mat_size = 12;
+	double *cameras = new double[num_cameras * camera_mat_size];
+	cameras[0] = M1.at<double>(0, 0);
+	cameras[1] = M1.at<double>(0, 1);
+	cameras[2] = M1.at<double>(0, 2);
+	cameras[3] = M1.at<double>(0, 3);
+	cameras[4] = M1.at<double>(1, 0);
+	cameras[5] = M1.at<double>(1, 1);
+	cameras[6] = M1.at<double>(1, 2);
+	cameras[7] = M1.at<double>(1, 3);
+	cameras[8] = M1.at<double>(2, 0);
+	cameras[9] = M1.at<double>(2, 1);
+	cameras[10] = M1.at<double>(2, 2);
+	cameras[11] = M1.at<double>(2, 3);
 
-    cv::Mat K = M1(Range(0, 3), Range(0, 3));
+	cv::Mat K = M1(Range(0, 3), Range(0, 3));
 
-    for(int i=1;i<num_cameras;i++) {
-        cv::Mat Rt = frame_history[i]->getPose();
-        //cout << "K = " << K << endl;
-        //cout << "Rt = " << Rt << endl;
+	for (int i = 1; i < num_cameras; i++) {
+		cv::Mat Rt = frame_history[i]->getPose();
+		//cout << "K = " << K << endl;
+		//cout << "Rt = " << Rt << endl;
 
-        cv::Mat projMtx;
-        projMtx = K*Rt(Range(0, 3), Range(0, 4));
+		cv::Mat projMtx;
+		projMtx = K * Rt(Range(0, 3), Range(0, 4));
 
-        //cout << "projMtx = " << projMtx << endl;
+		//cout << "projMtx = " << projMtx << endl;
 
-        //memcpy(&cameras[camera_mat_size*i], M1.data, sizeof(double)*camera_mat_size);
-        cameras[12*i+0] = projMtx.at<double>(0, 0);
-        cameras[12*i+1] = projMtx.at<double>(0, 1);
-        cameras[12*i+2] = projMtx.at<double>(0, 2);
-        cameras[12*i+3] = projMtx.at<double>(0, 3);
-        cameras[12*i+4] = projMtx.at<double>(1, 0);
-        cameras[12*i+5] = projMtx.at<double>(1, 1);
-        cameras[12*i+6] = projMtx.at<double>(1, 2);
-        cameras[12*i+7] = projMtx.at<double>(1, 3);
-        cameras[12*i+8] = projMtx.at<double>(2, 0);
-        cameras[12*i+9] = projMtx.at<double>(2, 1);
-        cameras[12*i+10] = projMtx.at<double>(2, 2);
-        cameras[12*i+11] = projMtx.at<double>(2, 3);
-    }
+		//memcpy(&cameras[camera_mat_size*i], M1.data, sizeof(double)*camera_mat_size);
+		cameras[12 * i + 0] = projMtx.at<double>(0, 0);
+		cameras[12 * i + 1] = projMtx.at<double>(0, 1);
+		cameras[12 * i + 2] = projMtx.at<double>(0, 2);
+		cameras[12 * i + 3] = projMtx.at<double>(0, 3);
+		cameras[12 * i + 4] = projMtx.at<double>(1, 0);
+		cameras[12 * i + 5] = projMtx.at<double>(1, 1);
+		cameras[12 * i + 6] = projMtx.at<double>(1, 2);
+		cameras[12 * i + 7] = projMtx.at<double>(1, 3);
+		cameras[12 * i + 8] = projMtx.at<double>(2, 0);
+		cameras[12 * i + 9] = projMtx.at<double>(2, 1);
+		cameras[12 * i + 10] = projMtx.at<double>(2, 2);
+		cameras[12 * i + 11] = projMtx.at<double>(2, 3);
+	}
 
-    //printArray(cameras, camera_mat_size*num_cameras);
+	//printArray(cameras, camera_mat_size*num_cameras);
 
-    // Keep a copy to check later what changed
-    double *initial_cameras = new double[num_cameras*camera_mat_size];
-    memcpy(initial_cameras, cameras, sizeof(double)*camera_mat_size*num_cameras);
+	// Keep a copy to check later what changed
+	double *initial_cameras = new double[num_cameras * camera_mat_size];
+	memcpy(initial_cameras, cameras,
+			sizeof(double) * camera_mat_size * num_cameras);
 
-    // Setup the 3D points
-    Mat pts3d_mat = kf->get3DPoints();
-    double* pts3d = new double[pts3d_mat.rows*3];
-    frame_history[0]->getCorrect3DPointOrdering(pts3d);
+	// Setup the 3D points
+	Mat pts3d_mat = kf->get3DPoints();
+	double* pts3d = new double[pts3d_mat.rows * 3];
+	frame_history[0]->getCorrect3DPointOrdering(pts3d);
 
-    double* initial_pts3d = new double[pts3d_mat.rows*3];
-    //memcpy(pts3d, pts3d_mat.data, sizeof(double)*pts3d_mat.rows*3);
-    memcpy(initial_pts3d, pts3d_mat.data, sizeof(double)*pts3d_mat.rows*3);
+	double* initial_pts3d = new double[pts3d_mat.rows * 3];
+	//memcpy(pts3d, pts3d_mat.data, sizeof(double)*pts3d_mat.rows*3);
+	memcpy(initial_pts3d, pts3d_mat.data, sizeof(double) * pts3d_mat.rows * 3);
 
-    // Setup the observed keypoints in the images corresponding to the above 3D points
-    uint32_t stride = num_3d_points*2;
-    uint32_t total_size = num_cameras*stride;
-    double* pts2d = new double[total_size];
+	// Setup the observed keypoints in the images corresponding to the above 3D points
+	uint32_t stride = num_3d_points * 2;
+	uint32_t total_size = num_cameras * stride;
+	double* pts2d = new double[total_size];
 
-    for(int i=0;i<num_cameras;i++) {
-        Frame* f = frame_history[i];
-        double* ptr = &(pts2d[i*stride]);
-        f->getObservedCorrespondingTo3DPoints(ptr);
-    }
+	for (int i = 0; i < num_cameras; i++) {
+		Frame* f = frame_history[i];
+		double* ptr = &(pts2d[i * stride]);
+		f->getObservedCorrespondingTo3DPoints(ptr);
+	}
 
-    // Now that we've gathered all data, pass it onto bundle adjustment
-    badj.setCameraCount(num_cameras);
-    badj.setPointCount(num_3d_points);
+	// Now that we've gathered all data, pass it onto bundle adjustment
+	badj.setCameraCount(num_cameras);
+	badj.setPointCount(num_3d_points);
 
-    for(int i=0;i<num_cameras;i++) {
-        badj.setInitialCameraEstimate(i, &cameras[camera_mat_size*i]);
-    }
+	for (int i = 0; i < num_cameras; i++) {
+		badj.setInitialCameraEstimate(i, &cameras[camera_mat_size * i]);
+	}
 
-    for(int i=0;i<num_3d_points;i++) {
-        badj.setInitialPoint3d(i, &pts3d[i*3]);
-    }
+	for (int i = 0; i < num_3d_points; i++) {
+		badj.setInitialPoint3d(i, &pts3d[i * 3]);
+	}
 
-    for(int i=0;i<num_cameras;i++) {
-        for(int j=0;j<num_3d_points;j++) {
-            badj.setInitialPoint2d(i, j, pts2d[i*stride+2*j+0], pts2d[i*stride+2*j+1]);
-        }
-    }
+	for (int i = 0; i < num_cameras; i++) {
+		for (int j = 0; j < num_3d_points; j++) {
+			badj.setInitialPoint2d(i, j, pts2d[i * stride + 2 * j + 0],
+					pts2d[i * stride + 2 * j + 1]);
+		}
+	}
 
-    return;
+	return;
 }
 
 int main(int argc, char* argv[]) {
@@ -140,10 +143,6 @@ int main(int argc, char* argv[]) {
 	string path = "/media/usinha/Utkarsh's HDD/datasets/kitti/00/image_0/";
 #endif
 	vector<string> filenames = get_image_path(path);
-
-	// Initialize Viz
-	viz::Viz3d myWindow("Coordinate Frame");
-	myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
 
 	//Initialize Map
 	Map* GlobalMap = new Map();
@@ -169,23 +168,13 @@ int main(int argc, char* argv[]) {
 
 			//curr_kf->reconstructFromPrevKF(prev_kf);
 			Mat points3D = curr_kf->stereoReconstruct();
-			viz::WCloud cloud_widget(points3D, viz::Color::green());
-			myWindow.showWidget("3D view", cloud_widget);
-			myWindow.spinOnce(1, true);
-			/*
-			 Mat M1 = curr_kf->getProjectionMat();
-			 Mat T;
-			 hconcat(Mat::eye(3,3, CV_64F), Mat::zeros(3, 1, CV_64F), T);
-			 Mat K = M1(Rect(0, 0, 3, 3));
-			 Affine3d cam_pose = Affine3d(T);
-			 viz::WCameraPosition camPos((Matx33d) K, frame->getFrame(), 5.0, viz::Color::red());
-			 myWindow.showWidget("CPW1", camPos, cam_pose);
-			 myWindow.spinOnce(1, true);
-			 */
+
 			// We made a new keyframe da
 			frame->setKeyFrame(curr_kf);
 			GlobalMap->insertKeyFrame(curr_kf);
 			GlobalMap->registerCurrentKeyFrame();
+			GlobalMap->renderCurrentKF();
+
 			// We start with a clean slate now
 			prev_frame_history.clear();
 			prev_frame_history.push_back(frame);
@@ -198,7 +187,7 @@ int main(int argc, char* argv[]) {
 			Mat T = frame->getPose();
 			//Mat T = frame->getCameraPose(matches);
 			Mat M1 = frame->getKeyFrame()->getProjectionMat();
-#if defined(IS_MAC)
+#if !defined(IS_MAC)
 			BundleAdjust badj;
 			constructBundleAdjustment(badj, prev_frame_history);
 			badj.execute();
@@ -208,8 +197,7 @@ int main(int argc, char* argv[]) {
 			Affine3d cam_pose = Affine3d(T);
 			viz::WCameraPosition camPos((Matx33d) K, frame->getFrame(), 5.0,
 					viz::Color::red());
-			myWindow.showWidget("CPW1", camPos, cam_pose);
-			myWindow.spinOnce(1, true);
+			GlobalMap->renderCurrentCamera(camPos, cam_pose);
 
 			Mat viewer_tform(4, 4, CV_64FC1);
 			viewer_tform(Range(0, 3), Range(0, 3)) = Mat::eye(3, 3, CV_64FC1);
