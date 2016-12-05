@@ -40,33 +40,53 @@ void constructBundleAdjustment(BundleAdjust& badj, vector<Frame*> frame_history)
     KeyFrame* kf = frame_history[0]->getKeyFrame();
     uint32_t num_3d_points = kf->get3DPoints().rows;
 
-    cout << num_cameras << " cameras, " << num_3d_points << " 3D points" << endl;
-
     // Setup the camera projection matrices
     Mat M1(kf->getProjectionMat());
-
-    cout << "The m1 = " << M1 << endl;
 
     // We just duplicate the camera projection matrix (hopefully it won't change much)
     const uint32_t camera_mat_size = 12;
     double *cameras = new double[num_cameras*camera_mat_size];
-    for(int i=0;i<num_cameras;i++) {
+    cameras[ 0] = M1.at<double>(0, 0);
+    cameras[ 1] = M1.at<double>(0, 1);
+    cameras[ 2] = M1.at<double>(0, 2);
+    cameras[ 3] = M1.at<double>(0, 3);
+    cameras[ 4] = M1.at<double>(1, 0);
+    cameras[ 5] = M1.at<double>(1, 1);
+    cameras[ 6] = M1.at<double>(1, 2);
+    cameras[ 7] = M1.at<double>(1, 3);
+    cameras[ 8] = M1.at<double>(2, 0);
+    cameras[ 9] = M1.at<double>(2, 1);
+    cameras[10] = M1.at<double>(2, 2);
+    cameras[11] = M1.at<double>(2, 3);
+
+    cv::Mat K = M1(Range(0, 3), Range(0, 3));
+
+    for(int i=1;i<num_cameras;i++) {
+        cv::Mat Rt = frame_history[i]->getPose();
+        //cout << "K = " << K << endl;
+        //cout << "Rt = " << Rt << endl;
+
+        cv::Mat projMtx;
+        projMtx = K*Rt(Range(0, 3), Range(0, 4));
+
+        //cout << "projMtx = " << projMtx << endl;
+
         //memcpy(&cameras[camera_mat_size*i], M1.data, sizeof(double)*camera_mat_size);
-        cameras[12*i+0] = M1.at<double>(0, 0);
-        cameras[12*i+1] = M1.at<double>(0, 1);
-        cameras[12*i+2] = M1.at<double>(0, 2);
-        cameras[12*i+3] = M1.at<double>(0, 3);
-        cameras[12*i+4] = M1.at<double>(1, 0);
-        cameras[12*i+5] = M1.at<double>(1, 1);
-        cameras[12*i+6] = M1.at<double>(1, 2);
-        cameras[12*i+7] = M1.at<double>(1, 3);
-        cameras[12*i+8] = M1.at<double>(2, 0);
-        cameras[12*i+9] = M1.at<double>(2, 1);
-        cameras[12*i+10] = M1.at<double>(2, 2);
-        cameras[12*i+11] = M1.at<double>(2, 3);
+        cameras[12*i+0] = projMtx.at<double>(0, 0);
+        cameras[12*i+1] = projMtx.at<double>(0, 1);
+        cameras[12*i+2] = projMtx.at<double>(0, 2);
+        cameras[12*i+3] = projMtx.at<double>(0, 3);
+        cameras[12*i+4] = projMtx.at<double>(1, 0);
+        cameras[12*i+5] = projMtx.at<double>(1, 1);
+        cameras[12*i+6] = projMtx.at<double>(1, 2);
+        cameras[12*i+7] = projMtx.at<double>(1, 3);
+        cameras[12*i+8] = projMtx.at<double>(2, 0);
+        cameras[12*i+9] = projMtx.at<double>(2, 1);
+        cameras[12*i+10] = projMtx.at<double>(2, 2);
+        cameras[12*i+11] = projMtx.at<double>(2, 3);
     }
 
-    printArray(cameras, camera_mat_size*num_cameras);
+    //printArray(cameras, camera_mat_size*num_cameras);
 
     // Keep a copy to check later what changed
     double *initial_cameras = new double[num_cameras*camera_mat_size];
@@ -75,12 +95,9 @@ void constructBundleAdjustment(BundleAdjust& badj, vector<Frame*> frame_history)
     // Setup the 3D points
     Mat pts3d_mat = kf->get3DPoints();
     double* pts3d = new double[pts3d_mat.rows*3];
+    frame_history[0]->getCorrect3DPointOrdering(pts3d);
+
     double* initial_pts3d = new double[pts3d_mat.rows*3];
-    for(int i=0;i<pts3d_mat.rows;i++) {
-        pts3d[3*i+0] = pts3d_mat.at<double>(i, 0);
-        pts3d[3*i+1] = pts3d_mat.at<double>(i, 1);
-        pts3d[3*i+2] = pts3d_mat.at<double>(i, 2);
-    }
     //memcpy(pts3d, pts3d_mat.data, sizeof(double)*pts3d_mat.rows*3);
     memcpy(initial_pts3d, pts3d_mat.data, sizeof(double)*pts3d_mat.rows*3);
 
@@ -88,8 +105,6 @@ void constructBundleAdjustment(BundleAdjust& badj, vector<Frame*> frame_history)
     uint32_t stride = num_3d_points*2;
     uint32_t total_size = num_cameras*stride;
     double* pts2d = new double[total_size];
-
-    cout << "total_size = " << total_size << endl;
 
     for(int i=0;i<num_cameras;i++) {
         Frame* f = frame_history[i];
@@ -154,8 +169,6 @@ int main(int argc, char* argv[]) {
 			prev_kf = curr_kf;
 			curr_kf = new KeyFrame(i, frame);
 
-            cout << curr_kf->getProjectionMat() << endl;
-
 			//curr_kf->reconstructFromPrevKF(prev_kf);
 			Mat points3D = curr_kf->stereoReconstruct();
 			viz::WCloud cloud_widget(points3D, viz::Color::green());
@@ -172,19 +185,14 @@ int main(int argc, char* argv[]) {
             prev_frame_history.push_back(frame);
 
 			//Frame should have keyFrame before matching
-			cout << i << endl;
 			vector<vector<Point2f>> matches = frame->matchFeatures();
-            cout << "Matching features da" << endl;
 			Mat T = frame->getPose();
 			//Mat T = frame->getCameraPose(matches);
-			cout << T << endl;
 			Mat M1 = frame->getKeyFrame()->getProjectionMat();
 
             BundleAdjust badj;
             constructBundleAdjustment(badj, prev_frame_history);
             badj.execute();
-
-            exit(0);
 
 			Mat K = M1(Rect(0, 0, 3, 3));
 			Affine3d cam_pose = Affine3d(T);

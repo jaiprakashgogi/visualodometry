@@ -59,6 +59,7 @@ public:
 	KeyFrame* getKeyFrame();
 	virtual ~Frame();
     void getObservedCorrespondingTo3DPoints(double*);
+    void getCorrect3DPointOrdering(double* ret);
 };
 
 #endif /* FRAME_H_ */

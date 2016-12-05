@@ -25,7 +25,7 @@ Frame::~Frame() {
 }
 
 Mat& Frame::getFrame() {
-    cout << __func__ << ": " << getFileName() << endl;
+    //cout << __func__ << ": " << getFileName() << endl;
     return frame;
 }
 
@@ -154,7 +154,7 @@ Mat Frame::ransacTest(const vector<DMatch>& matches,
 }
 
 vector<vector<Point2f>> Frame::matchFeatures(Frame* frame2) {
-    cout << "matchFeatures on timestamp " << timestamp << endl;
+    //cout << "matchFeatures on timestamp " << timestamp << endl;
 
     vector<vector<Point2f>> result;
     Frame* frame1;
@@ -268,7 +268,7 @@ Mat& Frame::getCameraPose(vector<vector<Point2f>> pts) {
     Point3f prev_p = corresp_3d.at(i);
     Point3f prev_q(point3DT.at<float>(i, 0), point3DT.at<float>(i, 1),
             point3DT.at<float>(i, 2));
-    cout << "scale: " << endl;
+    //cout << "scale: " << endl;
     for (int i = 1; i < corresp_3d.size(); i++) {
         auto p = corresp_3d.at(i);
         Point3f q = Point3f(point3DT.at<float>(i, 0), point3DT.at<float>(i, 1),
@@ -284,20 +284,23 @@ Mat& Frame::getCameraPose(vector<vector<Point2f>> pts) {
                         + (q.z - prev_q.z) * (q.z - prev_q.z));
         cout << d1 / d2 << " ";
     }
-    cout << endl;
+    //cout << endl;
 
-    cout << __func__ << point3DT.rows << " --- " << corresp_3d.size() << endl;
+    //cout << __func__ << point3DT.rows << " --- " << corresp_3d.size() << endl;
 
     return T;
 }
 
-void Frame::getObservedCorrespondingTo3DPoints(double* ret) {
-    cout << "starting here" << endl;
-
+void Frame::getCorrect3DPointOrdering(double* ret) {
     // Get the pose of the Frame using PnP
     Frame* key_frame = kf->getFrame();
+
+    // queryIdx = keyframe, trainIdx = inside frame
     vector<DMatch> curr_matches = matches;
+
+    // queryIdx = left, trainIdx = right
     vector<DMatch> key_matches = key_frame->getMatches();
+
     int size_kpts = key_frame->getKeyPoints().size();
 
     vector<int> flag_key(size_kpts, -1);
@@ -325,14 +328,101 @@ void Frame::getObservedCorrespondingTo3DPoints(double* ret) {
     cout << "size_kpts = " << size_kpts << " and num_pts = " << num_pts << endl;
 
     uint32_t counter = 0;
+    bool printed = true;
+    for (int i = 0; i < size_kpts; i++) {
+        if(flag_key[i] >= 0) {
+            int id_3d = flag_key[i];
+            Point3f pt3d = Point3f(points3d.at<float>(id_3d, 0),
+                                 points3d.at<float>(id_3d, 1),
+                                 points3d.at<float>(id_3d, 2));
+
+            ret[3*counter+0] = pt3d.x;
+            ret[3*counter+1] = pt3d.y;
+            ret[3*counter+2] = pt3d.z;
+
+            /*
+            if (flag_curr[i] >= 0) {
+                int id_2d = flag_curr[i];
+
+                int curr_id = curr_matches.at(id_2d).trainIdx;
+                if(this->timestamp % 5 == 0) {
+                    // We're at a keyframe - consider the query image instead of the train image
+                    curr_id = curr_matches.at(id_2d).queryIdx;
+                }
+
+
+                Point2f pt2d = Point2f(this->kpts[curr_id].pt.x,
+                                       this->kpts[curr_id].pt.y);
+
+            }*/
+            counter++;
+        }
+    }
+
+    return;
+}
+
+void Frame::getObservedCorrespondingTo3DPoints(double* ret) {
+    //cout << "starting here" << endl;
+
+    // Get the pose of the Frame using PnP
+    Frame* key_frame = kf->getFrame();
+
+    // queryIdx = keyframe, trainIdx = inside frame
+    vector<DMatch> curr_matches = matches;
+
+    // queryIdx = left, trainIdx = right
+    vector<DMatch> key_matches = key_frame->getMatches();
+
+    int size_kpts = key_frame->getKeyPoints().size();
+
+    vector<int> flag_key(size_kpts, -1);
+    vector<int> flag_curr(size_kpts, -1);
+    int i = 0;
+    for (auto it : key_matches) {
+        flag_key[it.queryIdx] = i++;
+    }
+    //cout << __LINE__ << " " << i << endl;
+    i = 0;
+    for (auto it : curr_matches) {
+        flag_curr[it.queryIdx] = i++;
+    }
+    //cout << __LINE__ << " " << i << endl;
+
+    // check for float or double
+    vector<Point2f> corresp_2d;
+    vector<Point3f> corresp_3d;
+    Mat points3d = kf->get3DPoints();
+
+    uint32_t num_pts = points3d.rows;
+
+    //cout << __func__ << " "  << points3d.rows << " " << key_matches.size() << " " << curr_matches.size() << endl;
+
+    //cout << "size_kpts = " << size_kpts << " and num_pts = " << num_pts << endl;
+
+    uint32_t counter = 0;
+    bool printed = true;
     for (int i = 0; i < size_kpts; i++) {
         if(flag_key[i] >= 0) {
             if (flag_curr[i] >= 0) {
                 int id_3d = flag_key[i];
                 int id_2d = flag_curr[i];
+
                 int curr_id = curr_matches.at(id_2d).trainIdx;
-                ret[2*counter+0] = this->kpts[curr_id].pt.x;
-                ret[2*counter+1] = this->kpts[curr_id].pt.y;
+                if(this->timestamp % 5 == 0) {
+                    // We're at a keyframe - consider the query image instead of the train image
+                    curr_id = curr_matches.at(id_2d).queryIdx;
+                }
+
+                Point3f pt3d = Point3f(points3d.at<float>(id_3d, 0),
+                                     points3d.at<float>(id_3d, 1),
+                                     points3d.at<float>(id_3d, 2));
+
+                Point2f pt2d = Point2f(this->kpts[curr_id].pt.x,
+                                       this->kpts[curr_id].pt.y);
+
+                ret[2*counter+0] = pt2d.x;
+                ret[2*counter+1] = pt2d.y;
             } else {
                 ret[2*counter+0] = -1;
                 ret[2*counter+1] = -1;
@@ -341,9 +431,7 @@ void Frame::getObservedCorrespondingTo3DPoints(double* ret) {
         }
     }
 
-    cout << "counter = " << counter << endl;
-
-    cout << "done with the frame function" << endl;
+    //cout << "counter = " << counter << endl;
 
     return;
 }
@@ -361,19 +449,19 @@ Mat& Frame::getPose() {
     for (auto it : key_matches) {
         flag_key[it.queryIdx] = i++;
     }
-    cout << __LINE__ << " " << i << endl;
+    //cout << __LINE__ << " " << i << endl;
     i = 0;
     for (auto it : curr_matches) {
         flag_curr[it.queryIdx] = i++;
     }
-    cout << __LINE__ << " " << i << endl;
+    //cout << __LINE__ << " " << i << endl;
 
     // check for float or double
     vector<Point2f> corresp_2d;
     vector<Point3f> corresp_3d;
     Mat points3d = kf->get3DPoints();
 
-    cout << __func__ << " "  << points3d.rows << " " << key_matches.size() << " " << curr_matches.size() << endl;
+    //cout << __func__ << " "  << points3d.rows << " " << key_matches.size() << " " << curr_matches.size() << endl;
 
     uint32_t counter = 0;
     for (int i = 0; i < size_kpts; i++) {

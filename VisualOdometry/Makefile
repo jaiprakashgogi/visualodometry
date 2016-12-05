@@ -1,7 +1,7 @@
 OS := $(shell uname)
 
 CC=g++
-CCFLAGS=-O3 -std=c++0x
+CCFLAGS=-O3 -std=c++0x -DNDEBUG
 
 INCLUDE_DIR=`pkg-config --cflags opencv`
 LIBS_DIR=`pkg-config --libs opencv`
@@ -14,7 +14,7 @@ CCFLAGS  += -DIS_MAC
 else
 LIBS_DIR += -L/work/software/ceres-solver/build/lib/
 INCLUDE_DIR += -I/work/software/ceres-solver/build/config -I/work/software/ceres-solver/include/ -I/usr/include/eigen3
-LIBS += -fopenmp
+LIBS += -fopenmp -lpthread -lgomp -lm
 endif
 
 CCINC=$(INCLUDE_DIR)
