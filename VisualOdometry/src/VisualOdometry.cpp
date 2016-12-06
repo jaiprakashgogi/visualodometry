@@ -29,6 +29,8 @@ vector<string> get_image_path(string dir_path) {
 		//}
 		//cout << '\n';
 	}
+
+    std::sort(filenames.begin(), filenames.end());
 	return filenames;
 }
 
@@ -167,7 +169,7 @@ int main(int argc, char* argv[]) {
 
 	vector<Frame*> prev_frame_history;
 
-    const uint32_t max_sz = 25; // filenames.size();
+    const uint32_t max_sz = filenames.size();
 
 	for (int i = 18; i < max_sz; i++) {
 		cout << "Working on frame #" << i << endl;
