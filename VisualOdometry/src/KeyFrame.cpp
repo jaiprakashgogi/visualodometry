@@ -171,6 +171,7 @@ void KeyFrame::updatePoseKF() {
 	vector<DMatch> curr_matches; //
 	vector<vector<Point2f>> match_1 = prev_key_frame->matchFeatures(curr_frame,
 			&curr_matches);
+
 	vector<DMatch> key_matches = prev_key_frame->getMatches();
 	int size_kpts = prev_key_frame->getKeyPoints().size();
 
@@ -224,10 +225,20 @@ void KeyFrame::updatePoseKF() {
 	Mat tvec = Mat::zeros(3, 1, CV_64FC1);  // output translation vector
 	bool useExtrinsicGuess = false;
 
-	solvePnPRansac(Mat(corresp_3d), Mat(corresp_2d), K, distCoeffs, rvec, tvec,
+    Mat mat_corresp_3d = Mat(corresp_3d).reshape(3);
+    Mat mat_corresp_2d = Mat(corresp_2d).reshape(2);
+
+    cout << __func__ << " --- mat_corresp_3d = " << mat_corresp_3d << endl;
+    cout << __func__ << " --- mat_corresp_2d = " << mat_corresp_2d << endl;
+
+	solvePnPRansac(mat_corresp_3d, mat_corresp_2d, K, distCoeffs, rvec, tvec,
 			useExtrinsicGuess, iterationsCount, reprojectionError, confidence);
 	Mat R;
 	Rodrigues(rvec, R); // R is 3x3
+
+    cout << __func__ << "R = " << R << endl;
+    cout << __func__ << "tvec = " << tvec << endl;
+
 	R = R.t();  // rotation of inverse
 	tvec = -R.t() * tvec; // translation of inverse
 	T = Mat::eye(4, 4, R.type()); // T is 4x4
@@ -237,7 +248,7 @@ void KeyFrame::updatePoseKF() {
 	Mat parentT = prev_kf->getPoseKF();
 	parentT.convertTo(parentT, CV_64F);
 	T = T * parentT;
-
+    cout << __func__ << T << endl;
 	//Convert points to homogenous
 	Mat point3DH;
 	convertPointsToHomogeneous(point3D, point3DH);
@@ -249,6 +260,7 @@ void KeyFrame::updatePoseKF() {
 	cout << __LINE__ << point_3d_tmp.size() << " " << point_3d_tmp.channels() << endl;
 	//point_3d_tmp = point_3d_tmp.reshape(4, point3DH.rows);
 	convertPointsFromHomogeneous(point_3d_tmp, point3Dglobal);
+
 	return;
 
 }
