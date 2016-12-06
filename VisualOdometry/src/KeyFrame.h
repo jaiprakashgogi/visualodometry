@@ -31,6 +31,7 @@ class KeyFrame {
 	Mat T;
 	Mat M1, M2;
 	Mat point3D;
+	Mat point3Dglobal;
     int timestamp;
 
 public:
@@ -39,11 +40,14 @@ public:
 	void registerKeyFrame();
 	Mat stereoReconstruct();
 	Mat get3DPoints();
+	Mat get3DPointsGlobal();
 	Mat getProjectionMat();
 	vector<Mat> getCommon3DPoints();
 	void setPrevKeyFrame(KeyFrame* prev_kf);
 	void setGlobalTransformation(Mat T);
 	void addFrames(Frame* frame);
+	Mat getPoseKF();
+	void updatePoseKF();
 	KeyFrame* getPrevKeyFrame();
 	virtual ~KeyFrame();
 

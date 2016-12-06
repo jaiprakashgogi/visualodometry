@@ -7,7 +7,7 @@
 
 #include "Map.h"
 
-Map::Map() {
+Map::Map() : kf_count(0), cam_count(0) {
 	// TODO Auto-generated constructor stub
 	// Initialize Viz
 	myWindow = viz::Viz3d("Coordinate Frame");
@@ -79,13 +79,19 @@ Mat Map::getTfromCommon3D(vector<Mat> _points3d) {
 
 void Map::renderCurrentKF() {
 	int current_id = mapkeyFrames.size() - 1;
-	Mat points3D = mapkeyFrames.at(current_id)->get3DPoints();
+	Mat points3D = mapkeyFrames.at(current_id)->get3DPointsGlobal();
 	viz::WCloud cloud_widget(points3D, viz::Color::green());
 	myWindow.showWidget("3D view", cloud_widget);
 	myWindow.spinOnce(1, true);
 }
 
+void Map::setViewerPose(Affine3d viewer_pose) {
+	myWindow.setViewerPose(viewer_pose);
+}
+
 void Map::renderCurrentCamera(viz::WCameraPosition camPos, Affine3d cam_pose) {
-	myWindow.showWidget("CPW1", camPos, cam_pose);
+	string cam_name = "CP" + to_string(cam_count);
+	cam_count++;
+	myWindow.showWidget(cam_name, camPos, cam_pose);
 	myWindow.spinOnce(1, true);
 }

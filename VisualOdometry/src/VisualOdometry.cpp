@@ -159,8 +159,13 @@ int main(int argc, char* argv[]) {
 		string f = filenames[i];
 		Frame* frame = new Frame(i, f);
 		frame->setKeyFrame(curr_kf);
+		if (curr_kf) {
+			curr_kf->addFrames(frame);
+		}
 		frame->extractFeatures();
+		imshow("curr_frame", frame->getFrame());
 		if (i % 5 == 0) {	//every 5th frame is a keyframe
+			Mat T;
 			prev_kf = curr_kf;
 			curr_kf = new KeyFrame(i, frame);
 			curr_kf->setPrevKeyFrame(prev_kf);
@@ -168,11 +173,12 @@ int main(int argc, char* argv[]) {
 
 			//curr_kf->reconstructFromPrevKF(prev_kf);
 			Mat points3D = curr_kf->stereoReconstruct();
-
-			// We made a new keyframe da
 			frame->setKeyFrame(curr_kf);
+
+			//update the pose of the
+			curr_kf->updatePoseKF();
 			GlobalMap->insertKeyFrame(curr_kf);
-			GlobalMap->registerCurrentKeyFrame();
+			//GlobalMap->registerCurrentKeyFrame();
 			GlobalMap->renderCurrentKF();
 
 			// We start with a clean slate now
@@ -183,7 +189,7 @@ int main(int argc, char* argv[]) {
 
 			//Frame should have keyFrame before matching
 			vector<vector<Point2f>> matches = frame->matchFeatures();
-			cout << "Matching features da" << endl;
+			//cout << "Matching features da" << endl;
 			Mat T = frame->getPose();
 			//Mat T = frame->getCameraPose(matches);
 			Mat M1 = frame->getKeyFrame()->getProjectionMat();
@@ -192,10 +198,9 @@ int main(int argc, char* argv[]) {
 			constructBundleAdjustment(badj, prev_frame_history);
 			badj.execute();
 #endif
-
 			Mat K = M1(Rect(0, 0, 3, 3));
 			Affine3d cam_pose = Affine3d(T);
-			viz::WCameraPosition camPos((Matx33d) K, frame->getFrame(), 5.0,
+			viz::WCameraPosition camPos((Matx33d) K, 5.0,
 					viz::Color::red());
 			GlobalMap->renderCurrentCamera(camPos, cam_pose);
 
@@ -206,6 +211,7 @@ int main(int argc, char* argv[]) {
 			viewer_tform.at<double>(2, 3) = 1;
 			viewer_tform.at<double>(3, 3) = 1;
 			Affine3d viewer_pose = Affine3d(viewer_tform) * cam_pose;
+			//GlobalMap->setViewerPose(viewer_pose);
 			//myWindow.setViewerPose(viewer_pose);
 		}
 #if defined(IS_MAC)
