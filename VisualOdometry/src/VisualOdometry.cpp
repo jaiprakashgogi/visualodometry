@@ -167,7 +167,9 @@ int main(int argc, char* argv[]) {
 
 	vector<Frame*> prev_frame_history;
 
-	for (int i = 0; i < filenames.size(); i++) {
+    const uint32_t max_sz = 25; // filenames.size();
+
+	for (int i = 18; i < max_sz; i++) {
 		cout << "Working on frame #" << i << endl;
 		string f = filenames[i];
 		Frame* frame = new Frame(i, f);
