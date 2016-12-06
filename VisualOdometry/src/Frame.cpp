@@ -154,7 +154,7 @@ Mat Frame::ransacTest(const vector<DMatch>& matches,
 
 vector<vector<Point2f>> Frame::matchFeatures(Frame* frame2,
 		vector<DMatch> *match) {
-	cout << "matchFeatures on timestamp " << timestamp << endl;
+	//cout << "matchFeatures on timestamp " << timestamp << endl;
 
 	vector<vector<Point2f>> result;
 	Frame* frame1;
@@ -522,7 +522,10 @@ Mat& Frame::getPose() {
     T(Range(0, 3), Range(0, 3)) = R * 1; // copies R into T
     T(Range(0, 3), Range(3, 4)) = tvec * 1; // copies tvec into T
 
-    //cout << T << endl;
+    Mat parentT = this->getKeyFrame()->getPoseKF();
+    parentT.convertTo(parentT, CV_64F);
+    cout << __func__ << ": " << T << endl;
+    T = T * parentT;
     return T;
 }
 
@@ -540,7 +543,6 @@ bool Frame::isKeyFrame() {
 
 void Frame::setKeyFrame(KeyFrame * kf) {
 	this->kf = kf;
-	//kf->addFrames(this);
 }
 
 string Frame::getFileName() {

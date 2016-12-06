@@ -17,11 +17,17 @@ using namespace std;
 class Map {
 	vector<KeyFrame *> mapkeyFrames;
 	Mat getTfromCommon3D(vector<Mat> _points3d);
+	viz::Viz3d myWindow;
+	int kf_count;
+	int cam_count;
 public:
 	Map();
 	int getNumKeyFrames();
 	void insertKeyFrame(KeyFrame* kf);
 	void registerCurrentKeyFrame();
+	void renderCurrentKF();
+	void renderCurrentCamera(viz::WCameraPosition camPos, Affine3d cam_pose);
+	void setViewerPose(Affine3d viewer_pose);
 	virtual ~Map();
 };
 
