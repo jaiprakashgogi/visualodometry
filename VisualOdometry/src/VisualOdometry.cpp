@@ -8,13 +8,15 @@
 
 #include "VisualOdometry.h"
 
-#define KEYFRAME_FREQ 3
+#define KEYFRAME_FREQ 5
 
 void print_opencv_version() {
     cout << "OpenCV version : " << CV_VERSION << endl;
     cout << "Major version : " << CV_MAJOR_VERSION << endl;
     cout << "Minor version : " << CV_MINOR_VERSION << endl;
     cout << "Subminor version : " << CV_SUBMINOR_VERSION << endl;
+
+    cout << "Boost version" << BOOST_VERSION << endl;
 }
 
 vector<string> get_image_path(string dir_path) {
@@ -171,7 +173,7 @@ int main(int argc, char* argv[]) {
 
     const uint32_t max_sz = filenames.size();
 
-	for (int i = 18; i < max_sz; i++) {
+	for (int i = 0; i < max_sz; i++) {
 		cout << "Working on frame #" << i << endl;
 		string f = filenames[i];
 		Frame* frame = new Frame(i, f);
