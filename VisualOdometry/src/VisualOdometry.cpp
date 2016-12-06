@@ -8,6 +8,15 @@
 
 #include "VisualOdometry.h"
 
+#define KEYFRAME_FREQ 3
+
+void print_opencv_version() {
+    cout << "OpenCV version : " << CV_VERSION << endl;
+    cout << "Major version : " << CV_MAJOR_VERSION << endl;
+    cout << "Minor version : " << CV_MINOR_VERSION << endl;
+    cout << "Subminor version : " << CV_SUBMINOR_VERSION << endl;
+}
+
 vector<string> get_image_path(string dir_path) {
 	vector<string> filenames;
 	for (directory_iterator itr(dir_path); itr != directory_iterator(); ++itr) {
@@ -136,6 +145,8 @@ void constructBundleAdjustment(BundleAdjust& badj,
 }
 
 int main(int argc, char* argv[]) {
+    print_opencv_version();
+
 	google::InitGoogleLogging(argv[0]);
 #if defined(IS_MAC)
 	string path = "/Users/jaiprakashgogi/workspace/visualodometry/dataset/dataset/sequences/00/image_0/";
@@ -166,7 +177,7 @@ int main(int argc, char* argv[]) {
 		}
 		frame->extractFeatures();
 		imshow("curr_frame", frame->getFrame());
-		if (i % 5 == 0) {	//every 5th frame is a keyframe
+		if (i % KEYFRAME_FREQ == 0) {	//every 5th frame is a keyframe
 			Mat T;
 			prev_kf = curr_kf;
 			curr_kf = new KeyFrame(i, frame);
