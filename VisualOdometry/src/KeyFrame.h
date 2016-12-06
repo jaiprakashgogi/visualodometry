@@ -42,6 +42,7 @@ public:
 	Mat get3DPoints();
 	Mat get3DPointsGlobal();
 	Mat getProjectionMat();
+    Mat getNew3DPoints();
 	vector<Mat> getCommon3DPoints();
 	void setPrevKeyFrame(KeyFrame* prev_kf);
 	void setGlobalTransformation(Mat T);

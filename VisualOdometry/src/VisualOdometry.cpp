@@ -173,6 +173,17 @@ int main(int argc, char* argv[]) {
 
     const uint32_t max_sz = filenames.size();
 
+    Mat viewer_tform(4, 4, CV_64FC1);
+	viewer_tform(Range(0, 3), Range(0, 3)) = Mat::eye(3, 3, CV_64FC1);
+	viewer_tform.at<double>(0, 3) = 1;
+	viewer_tform.at<double>(1, 3) = 1;
+	viewer_tform.at<double>(2, 3) = 1;
+	viewer_tform.at<double>(3, 3) = 1;
+	Affine3d viewer_pose = Affine3d(viewer_tform);
+    GlobalMap->setViewerPose(viewer_pose);
+
+    bool positioned = false;
+
 	for (int i = 0; i < max_sz; i++) {
 		cout << "Working on frame #" << i << endl;
 		string f = filenames[i];
@@ -197,7 +208,7 @@ int main(int argc, char* argv[]) {
 			//update the pose of the
 			curr_kf->updatePoseKF();
 			GlobalMap->insertKeyFrame(curr_kf);
-			//GlobalMap->registerCurrentKeyFrame();
+			GlobalMap->registerCurrentKeyFrame();
 			GlobalMap->renderCurrentKF();
 
 			// We start with a clean slate now
@@ -213,6 +224,7 @@ int main(int argc, char* argv[]) {
 			//Mat T = frame->getCameraPose(matches);
 			Mat M1 = frame->getKeyFrame()->getProjectionMat();
 #if !defined(IS_MAC)
+            cout << "Running bundle adjustment" << endl;
             BundleAdjust badj;
             constructBundleAdjustment(badj, prev_frame_history);
             badj.execute();
@@ -231,15 +243,9 @@ int main(int argc, char* argv[]) {
 					viz::Color::red());
 			GlobalMap->renderCurrentCamera(camPos, cam_pose);
 
-			Mat viewer_tform(4, 4, CV_64FC1);
-			viewer_tform(Range(0, 3), Range(0, 3)) = Mat::eye(3, 3, CV_64FC1);
-			viewer_tform.at<double>(0, 3) = 1;
-			viewer_tform.at<double>(1, 3) = 1;
-			viewer_tform.at<double>(2, 3) = 1;
-			viewer_tform.at<double>(3, 3) = 1;
-			Affine3d viewer_pose = Affine3d(viewer_tform) * cam_pose;
-			//GlobalMap->setViewerPose(viewer_pose);
-			//myWindow.setViewerPose(viewer_pose);
+            //GlobalMap->setViewerPose(cam_pose);
+
+						//myWindow.setViewerPose(viewer_pose);
 		}
 #if defined(IS_MAC)
 		if (waitKey(0) == int('q')) {

@@ -31,6 +31,14 @@ void Map::registerCurrentKeyFrame() {
 	cout << __func__ << ": " << mapkeyFrames.size() << endl;
 	if(mapkeyFrames.size() < 2) {
 		cout << __func__ << ": Only one keyframe" << endl;
+
+        Mat pts = mapkeyFrames[0]->get3DPointsGlobal();
+        int npoints = pts.rows;
+        for(int i=0;i<npoints;i++) {
+            pt3d.push_back(Point3f(pts.at<float>(i, 0),
+                                   pts.at<float>(i, 1),
+                                   pts.at<float>(i, 2)));
+        }
 		return;
 	}
 
@@ -38,9 +46,18 @@ void Map::registerCurrentKeyFrame() {
 	KeyFrame* curr_kf = mapkeyFrames.at(curr_id);
 
 	//Find common points between the two keyframes
-	vector<Mat> _points3d = curr_kf->getCommon3DPoints();
-	Mat T = getTfromCommon3D(_points3d);
-	curr_kf->setGlobalTransformation(T);
+	//vector<Mat> _points3d = curr_kf->getCommon3DPoints();
+	//Mat T = getTfromCommon3D(_points3d);
+	//curr_kf->setGlobalTransformation(T);
+
+    Mat new_pts = curr_kf->getNew3DPoints();
+    cout << "New point size = " << new_pts.size() << endl;
+    int npoints = new_pts.rows;
+    for(int i=0;i<npoints;i++) {
+        pt3d.push_back(Point3f(new_pts.at<float>(i, 0),
+                               new_pts.at<float>(i, 1),
+                               new_pts.at<float>(i, 2)));
+    }
 	return;
 }
 
@@ -79,7 +96,10 @@ Mat Map::getTfromCommon3D(vector<Mat> _points3d) {
 
 void Map::renderCurrentKF() {
 	int current_id = mapkeyFrames.size() - 1;
-	Mat points3D = mapkeyFrames.at(current_id)->get3DPointsGlobal();
+	//Mat points3D = mapkeyFrames.at(current_id)->get3DPointsGlobal();
+
+    Mat points3D(pt3d);
+
 	viz::WCloud cloud_widget(points3D, viz::Color::green());
 	myWindow.showWidget("3D view", cloud_widget);
 	myWindow.spinOnce(1, true);

@@ -15,6 +15,7 @@
 using namespace std;
 
 class Map {
+    vector<Point3f> pt3d;
 	vector<KeyFrame *> mapkeyFrames;
 	Mat getTfromCommon3D(vector<Mat> _points3d);
 	viz::Viz3d myWindow;
