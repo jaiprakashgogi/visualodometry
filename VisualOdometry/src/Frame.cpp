@@ -209,6 +209,7 @@ vector<vector<Point2f>> Frame::matchFeatures(Frame* frame2,
 		drawMatches(frame1->getFrame(), kpts1, frame2->getFrame(), kpts2,
 				*match, res);
 	}
+
 	//imshow("res", res);
 	result.push_back(points1);
 	result.push_back(points2);
@@ -459,10 +460,16 @@ void Frame::setPose(const Mat& pose) {
     return;
 }
 
-Mat& Frame::getPose() {
+Mat Frame::getPose() {
     if(T.data != nullptr) {
         cout << " returning the already existing pose" << endl;
         return T;
+    }
+
+    if(is_keyframe()) {
+        cout << "Returning the parent's pose" << endl;
+        Mat pose = kf->getPoseKF();
+        return pose;
     }
 
     // Get the pose of the Frame using PnP
@@ -477,19 +484,15 @@ Mat& Frame::getPose() {
     for (auto it : key_matches) {
         flag_key[it.queryIdx] = i++;
     }
-    //cout << __LINE__ << " " << i << endl;
     i = 0;
     for (auto it : curr_matches) {
         flag_curr[it.queryIdx] = i++;
     }
-    //cout << __LINE__ << " " << i << endl;
 
     // check for float or double
     vector<Point2f> corresp_2d;
     vector<Point3f> corresp_3d;
     Mat points3d = kf->get3DPointsGlobal();
-
-    //cout << __func__ << " "  << points3d.rows << " " << key_matches.size() << " " << curr_matches.size() << endl;
 
     uint32_t counter = 0;
     for (int i = 0; i < size_kpts; i++) {
@@ -530,14 +533,10 @@ Mat& Frame::getPose() {
     T(Range(0, 3), Range(0, 3)) = R * 1; // copies R into T
     T(Range(0, 3), Range(3, 4)) = tvec * 1; // copies tvec into T
 
-    cout << __func__ << ": local T : \n" << T << endl;
     Mat parentT = this->getKeyFrame()->getPoseKF();
     parentT.convertTo(parentT, CV_64F);
 
-    cout << __func__ << ": curr_kf T : \n" << T << endl;
     //T = T * parentT;
-
-    cout << __func__ << ": curr_frame T : \n" << T << endl;
 
     return T;
 }
@@ -584,4 +583,101 @@ bool Frame::isKeyframeWorthy() {
     }
 
     return answer;
+}
+
+// The keyframe variant
+void Frame::setupGlobalCorrespondences(int32_t *corresp) {
+    this->point_cloud_correspondence = corresp;
+}
+
+// The generic frame variant
+void Frame::setupGlobalCorrespondences() {
+    vector<KeyPoint> kf_kpts = kf->frame->kpts;
+    vector<KeyPoint> this_kpts = kpts;
+
+    point_cloud_correspondence = new int32_t[kpts.size()];
+    memset(point_cloud_correspondence, -1, sizeof(int32_t)*kpts.size());
+    for(auto it=matches.begin();it!=matches.end();++it) {
+        DMatch match = *it;
+        uint32_t idx_kf = match.queryIdx;
+        uint32_t idx_curr = match.trainIdx;
+
+        point_cloud_correspondence[idx_curr] = kf->frame->point_cloud_correspondence[idx_kf];
+    }
+
+    cout << "Successfully setup teh problem here" << endl;
+    return;
+}
+
+void Frame::computeReprojectionError(Map* map) {
+    // Now that we have the 3D points, the projection matrix and the observations
+    // we can calculate the reprojection error
+
+
+    Mat K(Matx33d(7.188560000000e+02, 0.000000000000e+00, 6.071928000000e+02,
+                  0.000000000000e+00, 7.188560000000e+02, 1.852157000000e+02,
+                  0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00));
+
+    // TODO why does this work?
+    Mat Rt = getPose().inv();
+
+    Mat P = K*Rt(Range(0, 3), Range(0, 4));
+
+    cout << "P = " << P << endl;
+
+    uint32_t start = 0;
+    uint32_t maxcount = kpts.size();
+    if(timestamp==0) {
+        maxcount = kpts.size();
+    }
+
+    uint32_t img_width  = frame.cols;
+    uint32_t img_height = frame.rows;
+
+    do {
+        Mat visual;
+        frame.copyTo(visual);
+        for(int i=start;i<start+maxcount;i++) {
+
+            int32_t idx = point_cloud_correspondence[i];
+
+            // Nothing to be done here
+            if(idx == -1) {
+                //line(visual, kpts[i].pt, kpts[i].pt, Scalar(0, 255, 0), 1);
+                continue;
+            }
+
+            Point3f pt3d = map->pt3d[idx];
+            Mat pt_homogenous(4, 1, CV_64FC1, Scalar(0));
+            pt_homogenous.at<double>(0, 0) = pt3d.x;
+            pt_homogenous.at<double>(1, 0) = pt3d.y;
+            pt_homogenous.at<double>(2, 0) = pt3d.z;
+            pt_homogenous.at<double>(3, 0) = 1;
+
+            Mat pt_reproj = P*pt_homogenous;
+            double x = pt_reproj.at<double>(0, 0);
+            double y = pt_reproj.at<double>(1, 0);
+            double w = pt_reproj.at<double>(2, 0);
+
+            Point2f pt2d(x/w, y/w);
+
+            line(visual, pt2d, kpts[i].pt, Scalar(0, 0, 255), 2);
+
+            // The observed keypoint
+            line(visual, kpts[i].pt, kpts[i].pt, Scalar(0, 255, 255), 3);
+
+            // The reprojected point
+            line(visual, pt2d, pt2d, Scalar(255, 0, 0), 3);
+
+            // From keypoint
+            //Point2f kfpt = this->kf->frame->kpts[i].pt;
+            //line(visual, kfpt, kfpt, Scalar(0, 0, 255), 3);
+        }
+
+        imshow("visualize reprojection", visual);
+        waitKey(0);
+
+        cout << "Loading another batch" << endl;
+        start += maxcount;
+    } while(start+maxcount < kpts.size());
 }

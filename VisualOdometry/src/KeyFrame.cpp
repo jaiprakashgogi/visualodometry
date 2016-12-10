@@ -129,30 +129,57 @@ Mat KeyFrame::getNew3DPoints() {
 	for (auto it : curr_kf_frame->getMatches()) {
 		has3d_curr[it.queryIdx] = i++;
 	}
+
+    int max_i = i;
+
 	i = 0;
 	for (auto it : prev_kf_frame->getMatches()) {
 		has3d_prev[it.queryIdx] = i++;
 	}
 
+    if(i>max_i) {
+        max_i = i;
+    }
+
+    cout<< "max_i = " << max_i << endl;
+
+    int idx = 0;
+    Mat ret(max_i, 4, CV_32FC1, Scalar(0));
 	for (auto it : keyframe_match) {
 		int id_prev = it.queryIdx;
 		int id_curr = it.trainIdx;
-		if (has3d_prev[id_prev] == -1 && has3d_curr[id_curr] >= 0) {
-			//comm_pt1.push_back(
-			//			Point3f(pts_prev.at<float>(has3d_prev[id_prev], 0),
-			//					pts_prev.at<float>(has3d_prev[id_prev], 1),
-			//					pts_prev.at<float>(has3d_prev[id_prev], 2)));
-			comm_pt2.push_back(
-					Point3f(pts_curr.at<float>(has3d_curr[id_curr], 0),
-							pts_curr.at<float>(has3d_curr[id_curr], 1),
-							pts_curr.at<float>(has3d_curr[id_curr], 2)));
-		}
+
+        bool in_prev_cloud = (has3d_prev[id_prev]>=0);
+        bool in_curr_cloud = (has3d_curr[id_curr]>=0);
+
+		if (!in_prev_cloud && in_curr_cloud) {
+            ret.at<float>(idx, 0) = 1;
+            ret.at<float>(idx, 1) = pts_curr.at<float>(has3d_curr[id_curr], 0);
+            ret.at<float>(idx, 2) = pts_curr.at<float>(has3d_curr[id_curr], 1);
+            ret.at<float>(idx, 3) = pts_curr.at<float>(has3d_curr[id_curr], 2);
+            idx++;
+		} else if(in_prev_cloud && in_curr_cloud) {
+            // Common point
+            ret.at<float>(idx, 0) = 2;
+            //ret.at<float>(idx, 1) = pts_prev.at<float>(has3d_prev[id_prev], 0);
+            //ret.at<float>(idx, 2) = pts_prev.at<float>(has3d_prev[id_prev], 1);
+            //ret.at<float>(idx, 3) = pts_prev.at<float>(has3d_prev[id_prev], 2);
+            ret.at<float>(idx, 1) = has3d_prev[id_prev];
+            ret.at<float>(idx, 0) = 0;
+            ret.at<float>(idx, 0) = 0;
+            idx++;
+        } else {
+            // Only in previous point cloud = we don't care
+            // In neither point cloud = how did that even happen?
+        }
 	}
 
 	//result.push_back(Mat(comm_pt1).reshape(1, comm_pt1.size()));
 	//result.push_back(Mat(comm_pt2).reshape(1, comm_pt2.size()));
 	//cout << __func__ << __LINE__ << Mat(comm_pt1).rows << "x" << Mat(comm_pt1).cols << "x" << Mat(comm_pt1).dims << endl;
-	return Mat(comm_pt2);
+	//return Mat(comm_pt2);
+
+    return ret(Range(0, idx), Range(0, 4));
 
 }
 
@@ -302,12 +329,12 @@ void KeyFrame::updatePoseKF() {
 	T(Range(0, 3), Range(0, 3)) = R * 1.0; // copies R into T
 	T(Range(0, 3), Range(3, 4)) = tvec * 1.0; // copies tvec into T
 
-	cout << __func__ << ": local_kf T: " << T << endl;
+	//cout << __func__ << ": local_kf T: " << T << endl;
 	Mat parentT = prev_kf->getPoseKF();
 	parentT.convertTo(parentT, CV_64F);
 	//T = T * parentT;
-	cout << __func__ << ": prev_kf T: " << parentT << endl;
-	cout << __func__ << ": curr_kf T: " << T << endl;
+	//cout << __func__ << ": prev_kf T: " << parentT << endl;
+	//cout << __func__ << ": curr_kf T: " << T << endl;
 	//Convert points to homogenous
 	Mat point3DH;
 	convertPointsToHomogeneous(point3D, point3DH);
@@ -316,10 +343,13 @@ void KeyFrame::updatePoseKF() {
 	Mat point_3d_tmp = T * point3DH.t();
 	point_3d_tmp = point_3d_tmp.t();
 	point_3d_tmp.convertTo(point_3d_tmp, point3D.type());
-	cout << __LINE__ << point_3d_tmp.size() << " " << point_3d_tmp.channels()
-			<< endl;
+	//cout << __LINE__ << point_3d_tmp.size() << " " << point_3d_tmp.channels()
+	//		<< endl;
 	//point_3d_tmp = point_3d_tmp.reshape(4, point3DH.rows);
 	convertPointsFromHomogeneous(point_3d_tmp, point3Dglobal);
+
+    cout << "timestamp = " << timestamp << endl;
+    cout << "The pose = " << T << endl;
 
 	return;
 
