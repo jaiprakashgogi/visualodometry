@@ -8,7 +8,7 @@
 #include "KeyFrame.h"
 
 KeyFrame::KeyFrame(int timestamp, Frame* frame) :
-		timestamp(timestamp), prev_kf(NULL) {
+		timestamp(timestamp), prev_kf(nullptr) {
 	// TODO Auto-generated constructor stub
 	this->frame = frame;
 	M1 = Mat(
@@ -55,7 +55,9 @@ Mat KeyFrame::stereoReconstruct() {
 
 	Frame* right_frame = new Frame(timestamp, right_file);
 	right_frame->extractFeatures();
+
 	vector<vector<Point2f>> pts = left_frame->matchFeatures(right_frame);
+
 // extract matches from the images
 	vector<Point2f> pts1 = pts.at(0);
 	vector<Point2f> pts2 = pts.at(1);
@@ -219,10 +221,12 @@ Mat KeyFrame::getPoseKF() {
 }
 
 void KeyFrame::updatePoseKF() {
-	if (!prev_kf) {
+	if (prev_kf == nullptr) {
+        T = Mat::eye(4, 4, CV_64FC1);
 		cout << "Prev kF no found" << endl;
 		return;
 	}
+
 	Frame* prev_key_frame = prev_kf->getFrame();
 	Frame* curr_frame = frame;
 	vector<DMatch> curr_matches; //
@@ -248,7 +252,7 @@ void KeyFrame::updatePoseKF() {
 	// check for float or double
 	vector<Point2f> corresp_2d;
 	vector<Point3f> corresp_3d;
-	Mat points3d = prev_kf->get3DPoints();
+	Mat points3d = prev_kf->get3DPointsGlobal();
 
 	//cout << __func__ << " "  << points3d.rows << " " << key_matches.size() << " " << curr_matches.size() << endl;
 
@@ -301,7 +305,7 @@ void KeyFrame::updatePoseKF() {
 	cout << __func__ << ": local_kf T: " << T << endl;
 	Mat parentT = prev_kf->getPoseKF();
 	parentT.convertTo(parentT, CV_64F);
-	T = T * parentT;
+	//T = T * parentT;
 	cout << __func__ << ": prev_kf T: " << parentT << endl;
 	cout << __func__ << ": curr_kf T: " << T << endl;
 	//Convert points to homogenous

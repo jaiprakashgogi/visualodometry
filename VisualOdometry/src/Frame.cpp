@@ -487,7 +487,7 @@ Mat& Frame::getPose() {
     // check for float or double
     vector<Point2f> corresp_2d;
     vector<Point3f> corresp_3d;
-    Mat points3d = kf->get3DPoints();
+    Mat points3d = kf->get3DPointsGlobal();
 
     //cout << __func__ << " "  << points3d.rows << " " << key_matches.size() << " " << curr_matches.size() << endl;
 
@@ -535,7 +535,7 @@ Mat& Frame::getPose() {
     parentT.convertTo(parentT, CV_64F);
 
     cout << __func__ << ": curr_kf T : \n" << T << endl;
-    T = T * parentT;
+    //T = T * parentT;
 
     cout << __func__ << ": curr_frame T : \n" << T << endl;
 
@@ -568,4 +568,20 @@ vector<DMatch>& Frame::getMatches() {
 
 KeyFrame* Frame::getKeyFrame() {
 	return kf;
+}
+
+bool Frame::isKeyframeWorthy() {
+    uint32_t match_size = matches.size();
+    uint32_t kpts_size = this->kf->getFrame()->kpts.size();
+    double ratio = 0.15;
+
+    bool answer = (match_size<=ratio*kpts_size);
+
+    cout << "match_size = " << match_size << " === kpts_size = " << kpts_size << endl;
+
+    if(answer) {
+        cout << " xxxxx creating a new keyframe" << endl;
+    }
+
+    return answer;
 }

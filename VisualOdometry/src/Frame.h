@@ -27,6 +27,7 @@ using namespace cv;
 class KeyFrame;
 
 class Frame {
+public:
 	KeyFrame* kf;
 	Mat frame;
 	string filename;
@@ -61,6 +62,7 @@ public:
 	virtual ~Frame();
     void getObservedCorrespondingTo3DPoints(double*);
     void getCorrect3DPointOrdering(double* ret);
+    bool isKeyframeWorthy();
 };
 
 #endif /* FRAME_H_ */

@@ -21,11 +21,15 @@ class Map {
 	viz::Viz3d myWindow;
 	int kf_count;
 	int cam_count;
+
+    uint32_t frame_counter = 0;
+
 public:
 	Map();
 	int getNumKeyFrames();
 	void insertKeyFrame(KeyFrame* kf);
 	void registerCurrentKeyFrame();
+    void incrementTimestamp();
 	void renderCurrentKF();
 	void renderCurrentCamera(viz::WCameraPosition camPos, Affine3d cam_pose);
 	void setViewerPose(Affine3d viewer_pose);

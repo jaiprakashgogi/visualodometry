@@ -24,8 +24,8 @@ using namespace cv;
 class Frame;
 
 class KeyFrame {
-	Frame* frame;
-	KeyFrame* prev_kf;
+	Frame* frame = nullptr;
+	KeyFrame* prev_kf = nullptr;
 	//vector<Mat> points3D;
 	vector<Frame*> frameVec;
 	Mat T;
