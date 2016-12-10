@@ -62,34 +62,46 @@ void Map::registerCurrentKeyFrame() {
 }
 
 
+
 Mat Map::getTfromCommon3D(vector<Mat> _points3d) {
-	//int nIter = 100;
-	Mat pts1 = _points3d.at(0);
-	Mat pts2 = _points3d.at(1);
+	cout << __func__ << ": E" << endl;
+	Mat qi = _points3d.at(0);
+	Mat pi = _points3d.at(1);
 
 
-	Mat pt1_mean(1, pts1.cols, pts1.type());
-	Mat pt2_mean(1, pts2.cols, pts2.type());
-	reduce(pts1, pt1_mean, 0, CV_REDUCE_AVG);
-	reduce(pts2, pt2_mean, 0, CV_REDUCE_AVG);
+	Mat qi_mean(1, qi.cols, qi.type());
+	Mat pi_mean(1, pi.cols, pi.type());
+	reduce(qi, qi_mean, 0, CV_REDUCE_AVG);
+	reduce(pi, pi_mean, 0, CV_REDUCE_AVG);
 
-	Mat pt1_mean_repeat(pts1.rows, pts1.cols, pts1.type());
-	Mat pt2_mean_repeat(pts2.rows, pts1.cols, pts2.type());
-	repeat(pt1_mean, pts1.rows, 1, pt1_mean_repeat);
-	repeat(pt2_mean, pts2.rows, 1, pt2_mean_repeat);
+	Mat qi_mean_repeat(qi.rows, qi.cols, qi.type());
+	Mat pi_mean_repeat(pi.rows, pi.cols, pi.type());
+	repeat(qi_mean, qi.rows, 1, qi_mean_repeat);
+	repeat(pi_mean, pi.rows, 1, pi_mean_repeat);
 
-	Mat pt1_new(pts1.rows, pts1.cols, pts1.type());
-	Mat pt2_new(pts2.rows, pts2.cols, pts2.type());
-	subtract(pts1, pt1_mean_repeat, pt1_new);
-	subtract(pts2, pt2_mean_repeat, pt2_new);
+	Mat yi(qi.rows, qi.cols, qi.type());
+	Mat xi(pi.rows, pi.cols, pi.type());
+	subtract(qi, qi_mean_repeat, yi);
+	subtract(pi, pi_mean_repeat, xi);
 
-	Mat S = pt1_new.t() * pt2_new;
+	Mat S = xi.t() * yi;
 	SVD svd(S);
 	Mat R = svd.vt.t() * svd.u.t();
-	Mat _t = pt2_mean.t() - R * pt1_mean.t();
+	if(determinant(R) == -1) {
+		cout << "******* det = -1 **********" << endl;
+		Mat W = Mat::eye(3, 3, R.type());
+		W.at<float>(3,3) = determinant(R);
+		R = svd.vt.t() * W * svd.u.t();
+	}
+
+
+	Mat _t = qi_mean.t() - R * pi_mean.t();
 	Mat T = Mat::eye(4, 4, CV_32F);
 	T(Range(0, 3), Range(0, 3)) = R * 1;
 	T(Range(0, 3), Range(3, 4)) = _t * 1;
+	cout << __LINE__ << ": R=" << R << " det(R): " << determinant(R) << endl;
+	cout << __LINE__ << _t << endl;
+	cout << __func__ << ": X" << endl;
 	//cout << __LINE__ << T << R << _t << endl;
 	return T;
 }
