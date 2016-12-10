@@ -284,7 +284,7 @@ int main(int argc, char* argv[]) {
 						//myWindow.setViewerPose(viewer_pose);
 		}
 #if defined(IS_MAC)
-		if (waitKey(0) == int('q')) {
+		if (waitKey(10) == int('q')) {
 			break;
 		}
 

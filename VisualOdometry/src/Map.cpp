@@ -119,6 +119,7 @@ void Map::renderCurrentKF() {
 	viz::WCloud cloud_widget(points3D, viz::Color::green());
 	myWindow.showWidget("3D view", cloud_widget);
 	myWindow.spinOnce(1, true);
+}
 
 void Map::incrementTimestamp() {
     this->frame_counter++;
