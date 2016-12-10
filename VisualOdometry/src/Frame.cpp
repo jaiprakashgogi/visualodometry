@@ -103,7 +103,7 @@ Mat Frame::ransacTest(const vector<DMatch>& matches,
 		const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
 		vector<DMatch> &outMatches, vector<Point2f>& points1,
 		vector<Point2f>& points2) {
-	bool refineF = false;
+	bool refineF = true;
 	double distance = 3;
 	double confidence = 0.99;
 	cv::Mat fundamental;
