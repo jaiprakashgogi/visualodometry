@@ -96,9 +96,9 @@ Mat Map::getTfromCommon3D(vector<Mat> _points3d) {
 
 
 	Mat _t = qi_mean.t() - R * pi_mean.t();
-	Mat T = Mat::eye(4, 4, CV_32F);
-	T(Range(0, 3), Range(0, 3)) = R * 1;
-	T(Range(0, 3), Range(3, 4)) = _t * 1;
+	Mat T = Mat::eye(4, 4, CV_64F);
+	T(Range(0, 3), Range(0, 3)) = R * 1.0;
+	T(Range(0, 3), Range(3, 4)) = _t * 1.0;
 	cout << __LINE__ << ": R=" << R << " det(R): " << determinant(R) << endl;
 	cout << __LINE__ << _t << endl;
 	cout << __func__ << ": X" << endl;
@@ -108,9 +108,9 @@ Mat Map::getTfromCommon3D(vector<Mat> _points3d) {
 
 void Map::renderCurrentKF() {
 	int current_id = mapkeyFrames.size() - 1;
-	//Mat points3D = mapkeyFrames.at(current_id)->get3DPointsGlobal();
+	Mat points3D = mapkeyFrames.at(current_id)->get3DPointsGlobal();
 
-    Mat points3D(pt3d);
+    //Mat points3D(pt3d);
 
 	viz::WCloud cloud_widget(points3D, viz::Color::green());
 	myWindow.showWidget("3D view", cloud_widget);
@@ -122,7 +122,7 @@ void Map::setViewerPose(Affine3d viewer_pose) {
 }
 
 void Map::renderCurrentCamera(viz::WCameraPosition camPos, Affine3d cam_pose) {
-	string cam_name = "CP" + to_string(cam_count);
+	string cam_name = "CP";// + to_string(cam_count);
 	cam_count++;
 	myWindow.showWidget(cam_name, camPos, cam_pose);
 	myWindow.spinOnce(1, true);

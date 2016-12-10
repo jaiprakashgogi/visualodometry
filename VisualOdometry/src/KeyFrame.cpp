@@ -24,7 +24,7 @@ KeyFrame::KeyFrame(int timestamp, Frame* frame) :
 					0.000000000000e+00, 1.000000000000e+00,
 					0.000000000000e+00));
 	cout << __func__ << endl;
-	T = Mat::eye(4, 4, CV_32F);
+	T = Mat::eye(4, 4, CV_64F);
 }
 
 KeyFrame::~KeyFrame() {
@@ -60,19 +60,22 @@ Mat KeyFrame::stereoReconstruct() {
 	vector<Point2f> pts1 = pts.at(0);
 	vector<Point2f> pts2 = pts.at(1);
 
-//	cout << pts1.size() << endl;
-//	for(int i=0; i<pts1.size(); i++) {
-//		cout << pts1.at(i).x << "x" << pts1.at(i).y << " ---" <<
-//				pts2.at(i).x << "x" << pts2.at(i).y << endl;
-//	}
+	Mat reconstructed;
+	this->frame->getFrame().copyTo(reconstructed);
+	//cout << pts1.size() << endl;
+	for (int i = 0; i < pts1.size(); i++) {
+		circle(reconstructed, pts1.at(i), 2, Scalar(0, 255, 255));
+	}
+	imshow("3d points", reconstructed);
 
 //Triangulate points
 	Mat point3DTH;
 	triangulatePoints(M1, M2, Mat(pts1), Mat(pts2), point3DTH);
 	point3DTH = point3DTH.t();
-	cout << __LINE__ << ": " << point3DTH.size() << " " << point3DTH.channels() << endl;
 	convertPointsFromHomogeneous(point3DTH, point3D);
-	point3D.copyTo(point3Dglobal);
+	if (!prev_kf) {
+		point3D.copyTo(point3Dglobal);
+	}
 	return point3D;
 
 }
@@ -134,9 +137,9 @@ Mat KeyFrame::getNew3DPoints() {
 		int id_curr = it.trainIdx;
 		if (has3d_prev[id_prev] == -1 && has3d_curr[id_curr] >= 0) {
 			//comm_pt1.push_back(
-		//			Point3f(pts_prev.at<float>(has3d_prev[id_prev], 0),
-		//					pts_prev.at<float>(has3d_prev[id_prev], 1),
-		//					pts_prev.at<float>(has3d_prev[id_prev], 2)));
+			//			Point3f(pts_prev.at<float>(has3d_prev[id_prev], 0),
+			//					pts_prev.at<float>(has3d_prev[id_prev], 1),
+			//					pts_prev.at<float>(has3d_prev[id_prev], 2)));
 			comm_pt2.push_back(
 					Point3f(pts_curr.at<float>(has3d_curr[id_curr], 0),
 							pts_curr.at<float>(has3d_curr[id_curr], 1),
@@ -261,8 +264,7 @@ void KeyFrame::updatePoseKF() {
 			int id_2d = flag_curr[i];
 			int curr_id = curr_matches.at(id_2d).trainIdx;
 			corresp_2d.push_back(
-					Point2f(curr_kpts[curr_id].pt.x,
-							curr_kpts[curr_id].pt.y));
+					Point2f(curr_kpts[curr_id].pt.x, curr_kpts[curr_id].pt.y));
 
 			counter++;
 		}
@@ -279,36 +281,39 @@ void KeyFrame::updatePoseKF() {
 	Mat tvec = Mat::zeros(3, 1, CV_64FC1);  // output translation vector
 	bool useExtrinsicGuess = false;
 
-    Mat mat_corresp_3d = Mat(corresp_3d).reshape(3);
-    Mat mat_corresp_2d = Mat(corresp_2d).reshape(2);
+	Mat mat_corresp_3d = Mat(corresp_3d).reshape(3);
+	Mat mat_corresp_2d = Mat(corresp_2d).reshape(2);
 
 	solvePnPRansac(mat_corresp_3d, mat_corresp_2d, K, distCoeffs, rvec, tvec,
 			useExtrinsicGuess, iterationsCount, reprojectionError, confidence);
 	Mat R;
 	Rodrigues(rvec, R); // R is 3x3
 
-    cout << __func__ << "R = " << R << endl;
-    cout << __func__ << "tvec = " << tvec << endl;
+	//cout << __func__ << "R = " << R << endl;
+	//cout << __func__ << "tvec = " << tvec << endl;
 
 	R = R.t();  // rotation of inverse
-	tvec = -R.t() * tvec; // translation of inverse
-	T = Mat::eye(4, 4, R.type()); // T is 4x4
-	T(Range(0, 3), Range(0, 3)) = R * 1; // copies R into T
-	T(Range(0, 3), Range(3, 4)) = tvec * 1; // copies tvec into T
+	tvec = -R * tvec; // translation of inverse
+	//T = Mat::eye(4, 4, R.type()); // T is 4x4
+	T(Range(0, 3), Range(0, 3)) = R * 1.0; // copies R into T
+	T(Range(0, 3), Range(3, 4)) = tvec * 1.0; // copies tvec into T
 
+	cout << __func__ << ": local_kf T: " << T << endl;
 	Mat parentT = prev_kf->getPoseKF();
 	parentT.convertTo(parentT, CV_64F);
 	T = T * parentT;
-    cout << __func__ << T << endl;
+	cout << __func__ << ": prev_kf T: " << parentT << endl;
+	cout << __func__ << ": curr_kf T: " << T << endl;
 	//Convert points to homogenous
 	Mat point3DH;
 	convertPointsToHomogeneous(point3D, point3DH);
 	point3DH = point3DH.reshape(1, point3DH.rows);
 	point3DH.convertTo(point3DH, T.type());
-	Mat point_3d_tmp = T*point3DH.t();
+	Mat point_3d_tmp = T * point3DH.t();
 	point_3d_tmp = point_3d_tmp.t();
 	point_3d_tmp.convertTo(point_3d_tmp, point3D.type());
-	cout << __LINE__ << point_3d_tmp.size() << " " << point_3d_tmp.channels() << endl;
+	cout << __LINE__ << point_3d_tmp.size() << " " << point_3d_tmp.channels()
+			<< endl;
 	//point_3d_tmp = point_3d_tmp.reshape(4, point3DH.rows);
 	convertPointsFromHomogeneous(point_3d_tmp, point3Dglobal);
 

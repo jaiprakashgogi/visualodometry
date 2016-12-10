@@ -173,6 +173,7 @@ int main(int argc, char* argv[]) {
 
     const uint32_t max_sz = filenames.size();
 
+    /*
     Mat viewer_tform(4, 4, CV_64FC1);
 	viewer_tform(Range(0, 3), Range(0, 3)) = Mat::eye(3, 3, CV_64FC1);
 	viewer_tform.at<double>(0, 3) = 1;
@@ -180,7 +181,7 @@ int main(int argc, char* argv[]) {
 	viewer_tform.at<double>(2, 3) = 1;
 	viewer_tform.at<double>(3, 3) = 1;
 	Affine3d viewer_pose = Affine3d(viewer_tform);
-    GlobalMap->setViewerPose(viewer_pose);
+    GlobalMap->setViewerPose(viewer_pose); */
 
     bool positioned = false;
 
@@ -193,13 +194,12 @@ int main(int argc, char* argv[]) {
 			curr_kf->addFrames(frame);
 		}
 		frame->extractFeatures();
-		imshow("curr_frame", frame->getFrame());
 		if (i % KEYFRAME_FREQ == 0) {	//every 5th frame is a keyframe
 			Mat T;
 			prev_kf = curr_kf;
 			curr_kf = new KeyFrame(i, frame);
 			curr_kf->setPrevKeyFrame(prev_kf);
-			cout << curr_kf->getProjectionMat() << endl;
+			//cout << curr_kf->getProjectionMat() << endl;
 
 			//curr_kf->reconstructFromPrevKF(prev_kf);
 			Mat points3D = curr_kf->stereoReconstruct();
@@ -208,7 +208,7 @@ int main(int argc, char* argv[]) {
 			//update the pose of the
 			curr_kf->updatePoseKF();
 			GlobalMap->insertKeyFrame(curr_kf);
-			GlobalMap->registerCurrentKeyFrame();
+			//GlobalMap->registerCurrentKeyFrame();
 			GlobalMap->renderCurrentKF();
 
 			// We start with a clean slate now

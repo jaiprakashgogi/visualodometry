@@ -209,7 +209,7 @@ vector<vector<Point2f>> Frame::matchFeatures(Frame* frame2,
 		drawMatches(frame1->getFrame(), kpts1, frame2->getFrame(), kpts2,
 				*match, res);
 	}
-	imshow("res", res);
+	//imshow("res", res);
 	result.push_back(points1);
 	result.push_back(points2);
 	return result;
@@ -525,15 +525,20 @@ Mat& Frame::getPose() {
     Mat R;
     Rodrigues(rvec, R); // R is 3x3
     R = R.t();  // rotation of inverse
-    tvec = -R.t() * tvec; // translation of inverse
+    tvec = -R * tvec; // translation of inverse
     T = Mat::eye(4, 4, R.type()); // T is 4x4
     T(Range(0, 3), Range(0, 3)) = R * 1; // copies R into T
     T(Range(0, 3), Range(3, 4)) = tvec * 1; // copies tvec into T
 
+    cout << __func__ << ": local T : \n" << T << endl;
     Mat parentT = this->getKeyFrame()->getPoseKF();
     parentT.convertTo(parentT, CV_64F);
-    cout << __func__ << ": " << T << endl;
+
+    cout << __func__ << ": curr_kf T : \n" << T << endl;
     T = T * parentT;
+
+    cout << __func__ << ": curr_frame T : \n" << T << endl;
+
     return T;
 }
 
