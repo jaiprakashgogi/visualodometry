@@ -103,15 +103,19 @@ Mat Frame::ransacTest(const vector<DMatch>& matches,
 		const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
 		vector<DMatch> &outMatches, vector<Point2f>& points1,
 		vector<Point2f>& points2) {
-	bool refineF = true;
-	double distance = 3.0;
+	bool refineF = false;
+	double distance = 3;
 	double confidence = 0.99;
 	cv::Mat fundamental;
+    outMatches.clear();
 	for (std::vector<cv::DMatch>::const_iterator it = matches.begin();
 			it != matches.end(); ++it) {
-		float x = keypoints1[it->queryIdx].pt.x;
-		float y = keypoints1[it->queryIdx].pt.y;
+        float x, y;
+
+		x = keypoints1[it->queryIdx].pt.x;
+		y = keypoints1[it->queryIdx].pt.y;
 		points1.push_back(cv::Point2f(x, y));
+
 		x = keypoints2[it->trainIdx].pt.x;
 		y = keypoints2[it->trainIdx].pt.y;
 		points2.push_back(cv::Point2f(x, y));
@@ -119,8 +123,12 @@ Mat Frame::ransacTest(const vector<DMatch>& matches,
 	// Compute F matrix using RANSAC
 	std::vector<uchar> inliers(points1.size(), 0);
 	if (points1.size() > 0 && points2.size() > 0) {
+
+        // Actually compute the fundamental matrix
 		fundamental = cv::findFundamentalMat(cv::Mat(points1), cv::Mat(points2),
 				inliers, cv::FM_RANSAC, distance, confidence);
+
+        // Iterate over the inliers and
 		std::vector<uchar>::const_iterator itIn = inliers.begin();
 		std::vector<cv::DMatch>::const_iterator itM = matches.begin();
 		for (; itIn != inliers.end(); ++itIn, ++itM) {
