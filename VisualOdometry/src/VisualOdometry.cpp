@@ -207,95 +207,103 @@ int main(int argc, char* argv[]) {
 		uint32_t start = getTickCount();
 		frame->extractFeatures();
 		uint32_t end = getTickCount();
-		//cout << "Extracting features took " << (end-start)/(getTickFrequency()) << "s" << endl;
+		cout << "Extracting features took "
+				<< (end - start) / (getTickFrequency()) << "s" << endl;
 
 		// Match features
 		start = getTickCount();
 		vector<vector<Point2f>> matches = frame->matchFeatures();
 		end = getTickCount();
-		//cout << "Feature matching took " << (end-start)/(getTickFrequency()) << "s" << endl;
+		cout << "Feature matching took " << (end - start) / (getTickFrequency())
+				<< "s" << endl;
 
-		prev_frame_history.push_back(frame);
-
-		while (prev_frame_history.size() > BUNDLE_ADJUST_WINDOW_SIZE) {
-			prev_frame_history.erase(prev_frame_history.begin());
-		}
-
-		if (i % KEYFRAME_FREQ == 0) {   //every 5th frame is a keyframe
-			// We're on a keyframe
+		//imshow("curr_frame", frame->getFrame());
+		//if(i==start_frame || frame->isKeyframeWorthy()) {
+		if (i % KEYFRAME_FREQ == 0) {	//every 5th frame is a keyframe
 			Mat T;
 
-			T = frame->getPose();
-			end = getTickCount();
-			cout << "Pose capture took " << (end - start) / (getTickFrequency())
-					<< "s" << endl;
+			if (i > start_frame) {
+				prev_kf = curr_kf;
+
+				curr_kf = new KeyFrame(i, frame);
+				curr_kf->setPrevKeyFrame(prev_kf);
+			}
+			cout << "The projection matrix is: " << curr_kf->getProjectionMat()
+					<< endl;
+
+			//curr_kf->reconstructFromPrevKF(prev_kf);
+			Mat points3D = curr_kf->stereoReconstruct();
+			frame->setKeyFrame(curr_kf);
+
+			//update the pose of the
+			curr_kf->updatePoseKF();
+			GlobalMap->insertKeyFrame(curr_kf);
+			GlobalMap->registerCurrentKeyFrame();
+			GlobalMap->renderCurrentKF();
+
+			// We start with a clean slate now
+			prev_frame_history.clear();
+			prev_frame_history.push_back(frame);
+
+			T = curr_kf->getPoseKF();
+
 			Mat M1 = frame->getKeyFrame()->getProjectionMat();
 			Mat K = M1(Rect(0, 0, 3, 3));
 			Affine3d cam_pose = Affine3d(T);
 			viz::WCameraPosition camPos((Matx33d) K, 5.0, viz::Color::red());
 			GlobalMap->renderCurrentCamera(camPos, cam_pose);
-		}
-		if (i == start_frame || i % KEYFRAME_FREQ == 0) { //every 5th frame is a keyframe
-			Mat T;
+		} else {
+			prev_frame_history.push_back(frame);
 
-			curr_kf = new KeyFrame(i, frame);
-			curr_kf->setPrevKeyFrame(prev_kf);
-		}
+			start = getTickCount();
+			Mat T = frame->getPose();
+			end = getTickCount();
+			cout << "Pose capture took " << (end - start) / (getTickFrequency())
+					<< "s" << endl;
 
-		//curr_kf->reconstructFromPrevKF(prev_kf);
-		Mat points3D = curr_kf->stereoReconstruct();
-		frame->setKeyFrame(curr_kf);
-		frame->set_keyframe();
-
-		//update the pose of the
-		curr_kf->updatePoseKF();
-		GlobalMap->insertKeyFrame(curr_kf);
-		GlobalMap->registerCurrentKeyFrame();
-		GlobalMap->renderCurrentKF();
-
-		// We start with a clean slate now
-
+			Mat M1 = frame->getKeyFrame()->getProjectionMat();
 #if !defined(IS_MAC)
-		if (DO_BUNDLE_ADJUST) {
 			cout << "Running bundle adjustment" << endl;
 			BundleAdjust badj;
-
-			// Inputs:
-			// - Global 3D coordinates
-			// - Individual camera matrices (intrinsics + rotation + translation)
-			// - Individual observed keypoints
-			// - Correspondence between observed keypoint and 3D coordinates
 			constructBundleAdjustment(badj, prev_frame_history);
 			badj.execute();
-
-			// Extract information from the optimization
-			// - Updated projection matrices
-			// - Updated global map
 
 			// Copy over the poses we calculated
 			for (int yo = 0; yo < prev_frame_history.size(); yo++) {
 				Mat T;
 				badj.getAdjustedCameraMatrix(yo, T);
+
 				prev_frame_history[yo]->setPose(T);
 			}
+#endif
+			Mat K = M1(Rect(0, 0, 3, 3));
+			Affine3d cam_pose = Affine3d(T);
+			viz::WCameraPosition camPos((Matx33d) K, 5.0, viz::Color::yellow());
+			GlobalMap->renderCurrentCamera(camPos, cam_pose);
+			GlobalMap->setViewerPose(cam_pose);
+
+			//myWindow.setViewerPose(viewer_pose);
+		}
+#if defined(IS_MAC)
+		if (waitKey(10) == int('q')) {
+			break;
 		}
 
-//myWindow.setViewerPose(viewer_pose);
 		imshow("oyo", frame->frame);
 		waitKey(1);
-		while (!positioned && waitKey(1) != int(' ')) {
+		while(!positioned && waitKey(1) != int(' ')) {
 			GlobalMap->renderCurrentKF();
 		}
 		GlobalMap->incrementTimestamp();
 		positioned = true;
 
-		if (i % 30 == 0) {
+		if(i%30 == 0) {
 			positioned = false;
 		}
 
-//if (waitKey(0) == int('q')) {
-//      break;
-//   }
+		//if (waitKey(0) == int('q')) {
+		//		break;
+		//   }
 #endif
 	}
 
