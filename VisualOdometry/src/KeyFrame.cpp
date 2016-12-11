@@ -8,7 +8,7 @@
 #include "KeyFrame.h"
 
 KeyFrame::KeyFrame(int timestamp, Frame* frame) :
-		timestamp(timestamp), prev_kf(nullptr) {
+		timestamp(timestamp), prev_kf(nullptr), reconstructionDone(false) {
 	// TODO Auto-generated constructor stub
 	this->frame = frame;
 	M1 = Mat(
@@ -23,7 +23,7 @@ KeyFrame::KeyFrame(int timestamp, Frame* frame) :
 					1.852157000000e+02, 0.000000000000e+00, 0.000000000000e+00,
 					0.000000000000e+00, 1.000000000000e+00,
 					0.000000000000e+00));
-	cout << __func__ << endl;
+	cout << __func__ << __LINE__ << endl;
 	T = Mat::eye(4, 4, CV_64F);
 }
 
@@ -42,6 +42,13 @@ void KeyFrame::addFrames(Frame* _frame) {
 
 Mat KeyFrame::getProjectionMat() {
 	return M1;
+}
+Mat KeyFrame::getProjectionMat2() {
+	return M2;
+}
+
+vector<Frame*>& KeyFrame::getFramesList() {
+	return frameVec;
 }
 
 Mat KeyFrame::stereoReconstruct() {
@@ -78,6 +85,7 @@ Mat KeyFrame::stereoReconstruct() {
 	if (!prev_kf) {
 		point3D.copyTo(point3Dglobal);
 	}
+	reconstructionDone = true;
 	return point3D;
 
 }
@@ -90,8 +98,154 @@ Mat KeyFrame::get3DPointsGlobal() {
 	return point3Dglobal;
 }
 
-void KeyFrame::reconstructFromPrevKF(KeyFrame *prev_kf) {
-	return;
+Mat KeyFrame::reconstructFromPrevKF(vector<vector<Point2f>> pts) {
+	if (prev_kf == nullptr) {
+		cout << __func__ << __LINE__ << ": No prev_kf" << endl;
+		return point3D;
+	}
+	cout << __func__ << endl;
+
+	//Frame* _curr_kf = getFrame();
+	//Frame* _prev_kf = prev_kf->getFrame();
+	//vector<vector<Point2f>> pts = frame->matchFeatures();
+
+	vector<Point2f> kf_pts = pts.at(0);
+	vector<Point2f> curr_pts = pts.at(1);
+
+	Mat reconstructed;
+	this->frame->getFrame().copyTo(reconstructed);
+	//cout << pts1.size() << endl;
+	for (int i = 0; i < curr_pts.size(); i++) {
+		circle(reconstructed, curr_pts.at(i), 2, Scalar(0, 255, 255));
+	}
+	imshow("3d points", reconstructed);
+
+	Mat K = M1(Rect(0, 0, 3, 3));
+	Mat E = findEssentialMat(kf_pts, curr_pts, K);
+	//Mat E = findEssentialMat(imgpts1, imgpts2, 1.0, Point2d(0,0), RANSAC, 0.999, 3, mask);
+	//Mat imgpts1, imgpts2;
+	//correctMatches(E, kf_pts, curr_pts, imgpts1, imgpts2);
+	//recoverPose(E, imgpts1, imgpts2, R, t, 1.0, Point2d(0,0), mask);
+	//cout << "E: " << E << endl;
+	Mat R, t;
+	recoverPose(E, kf_pts, curr_pts, K, R, t);
+
+	T(Range(0, 3), Range(0, 3)) = R * 1.0; // copies R into T
+	T(Range(0, 3), Range(3, 4)) = t * 1.0; // copies tvec into T
+
+	Mat _M1 = Mat::eye(3, 4, M1.type());
+	Mat _M2(3, 4, M2.type());
+	_M2(Range(0, 3), Range(0, 3)) = R * 1;
+	_M2(Range(0, 3), Range(3, 4)) = t * 1.0;
+
+	//cout << __func__ << __LINE__ << K << _M1 << _M2 << endl;
+	M1 = K * _M1;
+	M2 = K * _M2;
+	//cout << kf_pts.size() << "x" << imgpts1.size() << endl;
+
+	Mat point3DTH;
+	triangulatePoints(M1, M2, kf_pts, curr_pts, point3DTH);
+	point3DTH = point3DTH.t();
+	convertPointsFromHomogeneous(point3DTH, point3D);
+
+	//cout << point3D << endl;
+	int count = 0;
+	for (int i = 0; i < point3D.rows; i++) {
+		if (point3D.at<float>(i, 2) < 0.f) {
+			count++;
+		}
+	}
+	cout << __func__ << __LINE__ << ": Invalid Points : " << count << "/"
+			<< point3D.rows << endl;
+	//cout << point3D << endl;
+
+	if (!prev_kf->getPrevKeyFrame()) {
+		cout << "First reconstruction. Copy to Global" << endl;
+		point3D.copyTo(point3Dglobal);
+	}
+	reconstructionDone = true;
+	//return point3D;
+	cout << E << R << t << endl;
+	//imshow("curr_frame", getFrame()->getFrame());
+	//imshow("prev_kf", prev_kf->getFrame()->getFrame());
+	//waitKey(0);
+	return point3D;
+}
+
+Mat KeyFrame::reconstructFromPrevFrame() {
+	if (prev_kf == nullptr) {
+		cout << "Prev_kf is null" << endl;
+	}
+
+	//cout << "prev frame size: " << prev_kf->getFramesList().size() << endl;
+	Frame* prev_frame = prev_kf->getFramesList()[prev_kf->getFramesList().size()
+			- 2];
+	//cout << "prev frame id: " << prev_frame->getTimeStamp() << endl;
+	//cout << "curr frame id: " << getFrame()->getTimeStamp() << endl;
+
+	vector<vector<Point2f>> pts = getFrame()->matchFeatures(prev_frame);
+
+	vector<Point2f> kf_pts = pts.at(0);
+	vector<Point2f> curr_pts = pts.at(1);
+
+	Mat reconstructed;
+	this->frame->getFrame().copyTo(reconstructed);
+	//cout << pts1.size() << endl;
+	for (int i = 0; i < curr_pts.size(); i++) {
+		circle(reconstructed, curr_pts.at(i), 2, Scalar(0, 255, 255));
+	}
+	imshow("3d points", reconstructed);
+
+	Mat K = M1(Rect(0, 0, 3, 3));
+	Mat E = findEssentialMat(kf_pts, curr_pts, K);
+	//Mat E = findEssentialMat(imgpts1, imgpts2, 1.0, Point2d(0,0), RANSAC, 0.999, 3, mask);
+	//Mat imgpts1, imgpts2;
+	//correctMatches(E, kf_pts, curr_pts, imgpts1, imgpts2);
+	//recoverPose(E, imgpts1, imgpts2, R, t, 1.0, Point2d(0,0), mask);
+	//cout << "E: " << E << endl;
+	Mat R, t;
+	recoverPose(E, kf_pts, curr_pts, K, R, t);
+
+	T(Range(0, 3), Range(0, 3)) = R * 1.0; // copies R into T
+	T(Range(0, 3), Range(3, 4)) = t * 1.0; // copies tvec into T
+
+	Mat _M1 = Mat::eye(3, 4, M1.type());
+	Mat _M2(3, 4, M2.type());
+	_M2(Range(0, 3), Range(0, 3)) = R * 1;
+	_M2(Range(0, 3), Range(3, 4)) = t * 1.0;
+
+	//cout << __func__ << __LINE__ << K << _M1 << _M2 << endl;
+	M1 = K * _M1;
+	M2 = K * _M2;
+	//cout << kf_pts.size() << "x" << imgpts1.size() << endl;
+
+	Mat point3DTH;
+	triangulatePoints(M1, M2, kf_pts, curr_pts, point3DTH);
+	point3DTH = point3DTH.t();
+	convertPointsFromHomogeneous(point3DTH, point3D);
+
+	//cout << point3D << endl;
+	int count = 0;
+	for (int i = 0; i < point3D.rows; i++) {
+		if (point3D.at<float>(i, 2) < 0.f) {
+			count++;
+		}
+	}
+	cout << __func__ << __LINE__ << ": Invalid Points : " << count << "/"
+			<< point3D.rows << endl;
+	//cout << point3D << endl;
+
+	if (!prev_kf->getPrevKeyFrame()) {
+		cout << "First reconstruction. Copy to Global" << endl;
+		point3D.copyTo(point3Dglobal);
+	}
+	reconstructionDone = true;
+	//return point3D;
+	//cout << E << R << t << endl;
+	//imshow("curr_frame", getFrame()->getFrame());
+	//imshow("prev_kf", prev_kf->getFrame()->getFrame());
+	//waitKey(0);
+	return point3D;
 }
 
 void KeyFrame::setPrevKeyFrame(KeyFrame* _prev_kf) {
@@ -100,6 +254,10 @@ void KeyFrame::setPrevKeyFrame(KeyFrame* _prev_kf) {
 
 KeyFrame* KeyFrame::getPrevKeyFrame() {
 	return this->prev_kf;
+}
+
+bool KeyFrame::has3DPoints() {
+	return reconstructionDone;
 }
 
 Mat KeyFrame::getNew3DPoints() {
@@ -220,9 +378,26 @@ Mat KeyFrame::getPoseKF() {
 	return T;
 }
 
+void KeyFrame::setPoseKF(Mat _T) {
+	cout << __func__ << __LINE__ << ": " << _T << endl;
+	T = _T;
+	//Convert points to homogenous
+	Mat point3DH;
+	convertPointsToHomogeneous(point3D, point3DH);
+	point3DH = point3DH.reshape(1, point3DH.rows);
+	point3DH.convertTo(point3DH, T.type());
+	Mat point_3d_tmp = T * point3DH.t();
+	point_3d_tmp = point_3d_tmp.t();
+	point_3d_tmp.convertTo(point_3d_tmp, point3D.type());
+	cout << __LINE__ << point_3d_tmp.size() << " " << point_3d_tmp.channels()
+			<< endl;
+	//point_3d_tmp = point_3d_tmp.reshape(4, point3DH.rows);
+	convertPointsFromHomogeneous(point_3d_tmp, point3Dglobal);
+}
+
 void KeyFrame::updatePoseKF() {
 	if (prev_kf == nullptr) {
-        T = Mat::eye(4, 4, CV_64FC1);
+		T = Mat::eye(4, 4, CV_64FC1);
 		cout << "Prev kF no found" << endl;
 		return;
 	}

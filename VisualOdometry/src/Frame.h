@@ -59,10 +59,10 @@ public:
 	bool isKeyFrame();
 	string getFileName();
 	KeyFrame* getKeyFrame();
+	int getTimeStamp();
 	virtual ~Frame();
     void getObservedCorrespondingTo3DPoints(double*);
     void getCorrect3DPointOrdering(double* ret);
-    bool isKeyframeWorthy();
 };
 
 #endif /* FRAME_H_ */

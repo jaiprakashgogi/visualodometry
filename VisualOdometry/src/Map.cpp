@@ -7,7 +7,8 @@
 
 #include "Map.h"
 
-Map::Map() : kf_count(0), cam_count(0) {
+Map::Map() :
+		kf_count(0), cam_count(0) {
 	// TODO Auto-generated constructor stub
 	// Initialize Viz
 	myWindow = viz::Viz3d("Coordinate Frame");
@@ -29,16 +30,16 @@ void Map::insertKeyFrame(KeyFrame* kf) {
 
 void Map::registerCurrentKeyFrame() {
 	cout << __func__ << ": " << mapkeyFrames.size() << endl;
-	if(mapkeyFrames.size() < 2) {
+	if (mapkeyFrames.size() < 2) {
 		cout << __func__ << ": Only one keyframe" << endl;
 
-        Mat pts = mapkeyFrames[0]->get3DPointsGlobal();
-        int npoints = pts.rows;
-        for(int i=0;i<npoints;i++) {
-            pt3d.push_back(Point3f(pts.at<float>(i, 0),
-                                   pts.at<float>(i, 1),
-                                   pts.at<float>(i, 2)));
-        }
+		Mat pts = mapkeyFrames[0]->get3DPointsGlobal();
+		int npoints = pts.rows;
+		for (int i = 0; i < npoints; i++) {
+			pt3d.push_back(
+					Point3f(pts.at<float>(i, 0), pts.at<float>(i, 1),
+							pts.at<float>(i, 2)));
+		}
 		return;
 	}
 
@@ -50,24 +51,21 @@ void Map::registerCurrentKeyFrame() {
 	//Mat T = getTfromCommon3D(_points3d);
 	//curr_kf->setGlobalTransformation(T);
 
-    Mat new_pts = curr_kf->getNew3DPoints();
-    cout << "New point size = " << new_pts.size() << endl;
-    int npoints = new_pts.rows;
-    for(int i=0;i<npoints;i++) {
-        pt3d.push_back(Point3f(new_pts.at<float>(i, 0),
-                               new_pts.at<float>(i, 1),
-                               new_pts.at<float>(i, 2)));
-    }
+	Mat new_pts = curr_kf->getNew3DPoints();
+	cout << "New point size = " << new_pts.size() << endl;
+	int npoints = new_pts.rows;
+	for (int i = 0; i < npoints; i++) {
+		pt3d.push_back(
+				Point3f(new_pts.at<float>(i, 0), new_pts.at<float>(i, 1),
+						new_pts.at<float>(i, 2)));
+	}
 	return;
 }
-
-
 
 Mat Map::getTfromCommon3D(vector<Mat> _points3d) {
 	cout << __func__ << ": E" << endl;
 	Mat qi = _points3d.at(0);
 	Mat pi = _points3d.at(1);
-
 
 	Mat qi_mean(1, qi.cols, qi.type());
 	Mat pi_mean(1, pi.cols, pi.type());
@@ -87,13 +85,12 @@ Mat Map::getTfromCommon3D(vector<Mat> _points3d) {
 	Mat S = xi.t() * yi;
 	SVD svd(S);
 	Mat R = svd.vt.t() * svd.u.t();
-	if(determinant(R) == -1) {
+	if (determinant(R) == -1) {
 		cout << "******* det = -1 **********" << endl;
 		Mat W = Mat::eye(3, 3, R.type());
-		W.at<float>(3,3) = determinant(R);
+		W.at<float>(3, 3) = determinant(R);
 		R = svd.vt.t() * W * svd.u.t();
 	}
-
 
 	Mat _t = qi_mean.t() - R * pi_mean.t();
 	Mat T = Mat::eye(4, 4, CV_64F);
@@ -110,11 +107,11 @@ void Map::renderCurrentKF() {
 	int current_id = mapkeyFrames.size() - 1;
 	//Mat points3D = mapkeyFrames.at(current_id)->get3DPointsGlobal();
 
-    if(pt3d.size() == 0) {
-        return;
-    }
+	if (pt3d.size() == 0) {
+		return;
+	}
 
-    Mat points3D(pt3d);
+	Mat points3D(pt3d);
 
 	viz::WCloud cloud_widget(points3D, viz::Color::green());
 	myWindow.showWidget("3D view", cloud_widget);
@@ -122,7 +119,7 @@ void Map::renderCurrentKF() {
 }
 
 void Map::incrementTimestamp() {
-    this->frame_counter++;
+	this->frame_counter++;
 }
 
 void Map::setViewerPose(Affine3d viewer_pose) {
@@ -134,4 +131,45 @@ void Map::renderCurrentCamera(viz::WCameraPosition camPos, Affine3d cam_pose) {
 	cam_count++;
 	myWindow.showWidget(cam_name, camPos, cam_pose);
 	myWindow.spinOnce(1, true);
+}
+
+void Map::renderPointCloud(Mat points3D) {
+	cout << __func__ << endl;
+	viz::WCloud cloud_widget(points3D, viz::Color::green());
+	myWindow.showWidget("3D view", cloud_widget);
+	myWindow.spinOnce(1, true);
+	waitKey(0);
+}
+
+void Map::renderKFCameras() {
+	cout << __func__ << mapkeyFrames.size() << endl;
+	int kf_id = mapkeyFrames.size() - 1;
+	KeyFrame* curr_kf = mapkeyFrames.at(kf_id);
+	//cout << curr_kf->getProjectionMat() << endl;
+	//cout << curr_kf->getProjectionMat2() << endl;
+	Mat M1 = curr_kf->getProjectionMat();
+	Mat M2 = curr_kf->getProjectionMat2();
+	Mat K = M1(Rect(0, 0, 3, 3));
+	Mat T1 = K.inv() * M1;
+	Mat T2 = K.inv() * M2;
+	Mat Tl = Mat::eye(4, 4, T1.type());
+	Mat Tr = Mat::eye(4, 4, T2.type());
+	Tl(Range(0, 3), Range(0, 4)) = T1;
+	Tr(Range(0, 3), Range(0, 4)) = T2;
+
+	cout << T1 << T2 << endl;
+
+	Affine3d cam_pose_l = Affine3d(Tl);
+	viz::WCameraPosition camPos_l((Matx33d) K, 5.0, viz::Color::red());
+	renderCurrentCamera(camPos_l, cam_pose_l);
+	Affine3d cam_pose_r = Affine3d(Tr);
+	viz::WCameraPosition camPos_r((Matx33d) K, 5.0, viz::Color::yellow());
+	renderCurrentCamera(camPos_r, cam_pose_r);
+	//setViewerPose(cam_pose_r);
+	//waitKey(0);
+
+	//myWindow.showWidget("left", camPos_l, cam_pose_l);
+	//myWindow.showWidget("right", camPos_r, cam_pose_r);
+	//myWindow.spinOnce(1, true);
+
 }
