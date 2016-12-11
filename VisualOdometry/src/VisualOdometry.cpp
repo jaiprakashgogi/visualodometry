@@ -166,6 +166,7 @@ int main(int argc, char* argv[]) {
 
 	//Initialize Map
 	Map* GlobalMap = new Map();
+	GlobalMap->setMode(Map::MODE::STEREO);
 
 	// For every frame, check if its a keyframe
 	// Insert to Map if keyframe
@@ -219,70 +220,109 @@ int main(int argc, char* argv[]) {
 
 		//imshow("curr_frame", frame->getFrame());
 		//if(i==start_frame || frame->isKeyframeWorthy()) {
-		if (i % KEYFRAME_FREQ == 0) {	//every 5th frame is a keyframe
-			Mat T;
-
-			if (i > start_frame) {
+		if (GlobalMap->getMode() == Map::MODE::MONO) {
+			if (i == start_frame + 1 || frame->isKeyFrame()) {
+				Mat T;
+				if (i != start_frame + 1)
+					T = frame->getPose();
 				prev_kf = curr_kf;
-
 				curr_kf = new KeyFrame(i, frame);
 				curr_kf->setPrevKeyFrame(prev_kf);
+				//Mat pts = curr_kf->reconstructFromPrevKF(matches);
+				Mat pts = curr_kf->reconstructFromPrevFrame();
+				GlobalMap->insertKeyFrame(curr_kf);
+				if (i != start_frame + 1) {
+					curr_kf->setPoseKF(T);
+					GlobalMap->registerCurrentKeyFrame();
+				}
+				GlobalMap->renderCurrentKF();
+				GlobalMap->renderKFCameras();
+			} else if (frame->getKeyFrame()->has3DPoints()) {
+				if (i > start_frame) {
+					prev_kf = curr_kf;
+					Mat T = frame->getPose();
+					end = getTickCount();
+					cout << "Pose capture took "
+							<< (end - start) / (getTickFrequency()) << "s"
+							<< endl;
+					Mat M1 = frame->getKeyFrame()->getProjectionMat();
+					Mat K = M1(Rect(0, 0, 3, 3));
+					Affine3d cam_pose = Affine3d(T);
+					viz::WCameraPosition camPos((Matx33d) K, 5.0,
+							viz::Color::red());
+					GlobalMap->renderCurrentCamera(camPos, cam_pose);
+				}
 			}
-			cout << "The projection matrix is: " << curr_kf->getProjectionMat()
-					<< endl;
-
-			//curr_kf->reconstructFromPrevKF(prev_kf);
-			Mat points3D = curr_kf->stereoReconstruct();
-			frame->setKeyFrame(curr_kf);
-
-			//update the pose of the
-			curr_kf->updatePoseKF();
-			GlobalMap->insertKeyFrame(curr_kf);
-			GlobalMap->registerCurrentKeyFrame();
-			GlobalMap->renderCurrentKF();
-
-			// We start with a clean slate now
-			prev_frame_history.clear();
-			prev_frame_history.push_back(frame);
-
-			T = curr_kf->getPoseKF();
-
-			Mat M1 = frame->getKeyFrame()->getProjectionMat();
-			Mat K = M1(Rect(0, 0, 3, 3));
-			Affine3d cam_pose = Affine3d(T);
-			viz::WCameraPosition camPos((Matx33d) K, 5.0, viz::Color::red());
-			GlobalMap->renderCurrentCamera(camPos, cam_pose);
 		} else {
-			prev_frame_history.push_back(frame);
-
-			start = getTickCount();
-			Mat T = frame->getPose();
-			end = getTickCount();
-			cout << "Pose capture took " << (end - start) / (getTickFrequency())
-					<< "s" << endl;
-
-			Mat M1 = frame->getKeyFrame()->getProjectionMat();
-#if !defined(IS_MAC)
-			cout << "Running bundle adjustment" << endl;
-			BundleAdjust badj;
-			constructBundleAdjustment(badj, prev_frame_history);
-			badj.execute();
-
-			// Copy over the poses we calculated
-			for (int yo = 0; yo < prev_frame_history.size(); yo++) {
+			if (i % KEYFRAME_FREQ == 0) {	//every 5th frame is a keyframe
 				Mat T;
-				badj.getAdjustedCameraMatrix(yo, T);
 
-				prev_frame_history[yo]->setPose(T);
-			}
+				if (i > start_frame) {
+					prev_kf = curr_kf;
+
+					curr_kf = new KeyFrame(i, frame);
+					curr_kf->setPrevKeyFrame(prev_kf);
+				}
+				cout << "The projection matrix is: "
+						<< curr_kf->getProjectionMat() << endl;
+
+				//curr_kf->reconstructFromPrevKF(prev_kf);
+				Map::MODE mode = GlobalMap->getMode();
+				cout << __func__ << ": Mode = " << mode << endl;
+				Mat points3D = curr_kf->stereoReconstruct();
+				frame->setKeyFrame(curr_kf);
+
+				//update the pose of the
+				curr_kf->updatePoseKF();
+				GlobalMap->insertKeyFrame(curr_kf);
+				GlobalMap->registerCurrentKeyFrame();
+				GlobalMap->renderCurrentKF();
+
+				// We start with a clean slate now
+				prev_frame_history.clear();
+				prev_frame_history.push_back(frame);
+
+				T = curr_kf->getPoseKF();
+
+				Mat M1 = frame->getKeyFrame()->getProjectionMat();
+				Mat K = M1(Rect(0, 0, 3, 3));
+				Affine3d cam_pose = Affine3d(T);
+				viz::WCameraPosition camPos((Matx33d) K, 5.0,
+						viz::Color::red());
+				GlobalMap->renderCurrentCamera(camPos, cam_pose);
+			} else {
+				prev_frame_history.push_back(frame);
+
+				start = getTickCount();
+				Mat T = frame->getPose();
+				end = getTickCount();
+				cout << "Pose capture took "
+						<< (end - start) / (getTickFrequency()) << "s" << endl;
+
+				Mat M1 = frame->getKeyFrame()->getProjectionMat();
+#if !defined(IS_MAC)
+				cout << "Running bundle adjustment" << endl;
+				BundleAdjust badj;
+				constructBundleAdjustment(badj, prev_frame_history);
+				badj.execute();
+
+				// Copy over the poses we calculated
+				for (int yo = 0; yo < prev_frame_history.size(); yo++) {
+					Mat T;
+					badj.getAdjustedCameraMatrix(yo, T);
+
+					prev_frame_history[yo]->setPose(T);
+				}
 #endif
-			Mat K = M1(Rect(0, 0, 3, 3));
-			Affine3d cam_pose = Affine3d(T);
-			viz::WCameraPosition camPos((Matx33d) K, 5.0, viz::Color::yellow());
-			GlobalMap->renderCurrentCamera(camPos, cam_pose);
-			GlobalMap->setViewerPose(cam_pose);
+				Mat K = M1(Rect(0, 0, 3, 3));
+				Affine3d cam_pose = Affine3d(T);
+				viz::WCameraPosition camPos((Matx33d) K, 5.0,
+						viz::Color::yellow());
+				GlobalMap->renderCurrentCamera(camPos, cam_pose);
+				GlobalMap->setViewerPose(cam_pose);
 
-			//myWindow.setViewerPose(viewer_pose);
+				//myWindow.setViewerPose(viewer_pose);
+			}
 		}
 #if defined(IS_MAC)
 		if (waitKey(10) == int('q')) {

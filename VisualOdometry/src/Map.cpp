@@ -20,6 +20,14 @@ Map::~Map() {
 	// TODO Auto-generated destructor stub
 }
 
+void Map::setMode(MODE _mode) {
+	mode = _mode;
+}
+
+Map::MODE Map::getMode() {
+	return mode;
+}
+
 int Map::getNumKeyFrames() {
 	return mapkeyFrames.size();
 }
