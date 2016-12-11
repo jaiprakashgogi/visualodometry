@@ -1,0 +1,166 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2016
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2016}
+
+%\usepackage{nips_2016}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+\usepackage[final]{nips_2016}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+%\usepackage{amsmath}
+
+\title{Visual Odometry}
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+
+\author{
+  Jai Prakash\\
+  Robotics Institute\\
+  Carnegie Mellon University\\
+  Pittsburgh, PA 15213\\
+  \texttt{jprakash@andrew.cmu.edu} \\
+  %% examples of more authors
+ 	\And
+ Utkarsh SInha \\
+  Robotics Institute\\
+ Carnegie Mellon University \\
+ Pittsburgh, PA 15213\\
+  \texttt{usinha@andrew.cmu.edu} \\
+  %% \AND
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+}
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+\begin{abstract}
+In this project, trying to localize the camera using visual odometry. The major component of the project is to generate keyframes according to pre-defined heuristics and triangulate the points to create 3D reconstruction of the scene. The intermediate frames can be found using Perspective-n-point algorithm. In addition, we also perform local bundle adjustment over last few frames so that the localization is locally consistent. We also plan to exploit the onboard inertial sensors to get prior for the localization.
+\end{abstract}
+
+\section{Introduction}
+
+Augmented reality has been around for years, yet not all problems are solved in the domain. One of the challenges is precise localization of the device in world coordinates. Several augmented reality applications on smartphones are based on markers. One good example of marker-based AR is Vuforia. On the other hand, there are standalone devices like Hololens, which has number of sensors to understand the scene and localize the head mounted display in the scene.
+
+In many such applications, understanding the scene is not important. Localizing the camera in the world is enough to solve certain problems. In this project we focus on localizing the phone camera using the camera and the inertial sensors.
+
+
+\section{Background}
+\textbf{Visual SLAM vs. Visual Odometry: } The focus in the visual SLAM techniques is both in reconstruting the scene and also localizing the camera in the scene. However, our main focus is just in localization of the camera. For the scope of the project, we focus only to be locally consistent. So, our system's camera position might drift over time - however, we are only interested in accurate localization in a short timespan. We do not explore ideas like loop closure in this project.
+
+\section{Feature Extraction and Matching}
+We have experimented with OpenCV KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames using optical flow. For AKAZE\cite{akaze} and ORB features, the correspondences are found using feature matching. The outliers are removed using the epipolar constraints and finding unique matches i.e. feature from first image matches to a unique feature in second image and vice-versa.
+
+\subsection{3D reconstruction}
+Using the feature matching, we can triagulate the points. The fundamental matrix gives the relationship between the feature points. We used RANSAC based 8-point algorithm to find the fundamental matrix.
+
+This gives rise to four possible camera configurations (with $W$/$W^T$ and $\pm t$). The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
+
+\subsection{Camera pose recovery}
+Once the scene is reconstructed using the keyframes, the camera pose can be recovered using Perspective-n-point (PnP) algorithms. By knowing the 3D points from the reconstruction, and its corresponding feature location in any image the camera pose can be recovered using PnP.
+
+\subsection{Bundle Adjustment}
+In visual odometry, the current camera pose is obtained by adding the last observed motion to the current detection change. This leads to a superlinear increase in pose error over time. In this section, we look at the techniques we intend to use to correct this pose drift.
+
+One solution is to use bundle adjustment to impose geometrical constraints over multiple
+frames. The computational cost increases with the cube of the number of frames used for computation. Thus, we limit the number of frames to a small window from the previously captured frames. This approach is called local bundle adjustment.
+
+\section{Results}
+So far, we have been working with the datasets available online. The results are illustrated on the Middlebury Temple dataset \cite{middlebury}. We first find the feature correspondences and then remove the outliers using Epipolar constraints. The outliers can be found by using a threshold on distance from epipolar line and along the epipolar line.
+
+We are able to recosntruct the temple structure using the two keyframes (handpicked for now). The results are shown in figure \ref{fig:reconstruction}. Once the reconstruction is done, we are able to recover the camera poses using PnP algorithm as illustrated in the figure \ref{fig:pose}. We are using OpenCV for feature matching and visualization.
+
+
+\section{Future Work}
+Until now, we have evaluated the various landmark tracking techniques on the Temple dataset. We intend to test the different techniques across multiple datasets and pick an algorithm that works best.
+
+We will integrate Ceres solver by Google for local bundle adjustment. This would improve the localization of the camera and generate a better tracking of the scene.
+
+If time permits, we also intend to integrate intertial sensors readily available on mobile devices to improve the estimate\cite{tumsensor}.\\
+
+
+\iffalse
+{\small{
+\begin{thebibliography}{15}
+
+\bibitem{Szeliski}
+Szeliski, Richard. \textit{Computer Vision: Algorithms and Applications}. 1st ed. London: Springer-Verlag, 2010. Print.
+
+\bibitem{middlebury} 
+Temple dataset \url{http://vision.middlebury.edu/mview/data/}
+
+      \bibitem{akaze} P. Alcantarilla, J. Nuevo and A. Bartoli, \textit{Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces}, BMVC 2013
+      \bibitem{threepoint} F. Fraundorfer, P. Tanskanen and M. Pollefeys \textit{A minimal case solution to the calibrated relative pose problem for the case of two known orientation angles}, ECCV 2010.
+       \bibitem{vo} D. Nister, O. Naroditsky and J. Bergen \textit{Visual Odometry}, CVPR 2004
+       
+       \bibitem{homography} O. D. Faugeras and F. Lustman, \textit{Motion and structure from motion in a piecewise planar environment}, IJPRAI, 1988
+
+       \bibitem{semidense} T. Schops, J. Engel and D. Cremers \textit{Semi-Dense visual odometry for AR on a smartphone}
+      \bibitem{tumsensor} P. Tiefenbacher, T. Schulze and G. Rigoll \textit{Off-the-shelf sensor integration for mono-SLAM on Smart Devices}, CVPR 2015
+}
+\fi
+
+%\endgroup
+
+\section*{References}
+
+References follow the acknowledgments. Use unnumbered first-level
+heading for the references. Any choice of citation style is acceptable
+as long as you are consistent. It is permissible to reduce the font
+size to \verb+small+ (9 point) when listing the references. {\bf
+  Remember that you can use a ninth page as long as it contains
+  \emph{only} cited references.}
+\medskip
+
+\small
+
+[1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms
+for connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and
+T.K.\ Leen (eds.), {\it Advances in Neural Information Processing
+  Systems 7}, pp.\ 609--616. Cambridge, MA: MIT Press.
+
+[2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS:
+  Exploring Realistic Neural Models with the GEneral NEural SImulation
+  System.}  New York: TELOS/Springer--Verlag.
+
+[3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of
+learning and recall at excitatory recurrent synapses and cholinergic
+modulation in rat hippocampal region CA3. {\it Journal of
+  Neuroscience} {\bf 15}(7):5249-5262.
+
+\end{document}
