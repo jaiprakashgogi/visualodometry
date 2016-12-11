@@ -463,96 +463,85 @@ int Frame::getTimeStamp() {
 	return timestamp;
 }
 
-Mat& Frame::getPose() {
-	if (T.data != nullptr) {
-		cout << " returning the already existing pose" << endl;
-		return T;
-	}
-	cout << __func__ << endl;
-	// Get the pose of the Frame using PnP
+Mat Frame::getPose() {
+    if(T.data != nullptr) {
+        cout << " returning the already existing pose" << endl;
+        return T;
+    }
 
-	cout << __func__ << __LINE__ << ": " << this->getTimeStamp() << " --- KF: "
-			<< kf->getFrame()->getTimeStamp() << endl;
-	Frame* key_frame = kf->getFrame();
-	vector<DMatch> curr_matches = matches;
-	vector<DMatch> key_matches = key_frame->getMatches();
-	int size_kpts = key_frame->getKeyPoints().size();
+    if(is_keyframe()) {
+        cout << "Returning the parent's pose" << endl;
+        Mat pose = kf->getPoseKF();
+        return pose;
+    }
 
-	cout << __LINE__ << " " << size_kpts << endl;
-	vector<int> flag_key(size_kpts, -1);
-	vector<int> flag_curr(size_kpts, -1);
-	int i = 0;
-	for (auto it : key_matches) {
-		flag_key[it.queryIdx] = i++;
-	}
-	cout << __LINE__ << " " << i << endl;
-	i = 0;
-	for (auto it : curr_matches) {
-		flag_curr[it.queryIdx] = i++;
-	}
-	cout << __LINE__ << " " << i << endl;
+    // Get the pose of the Frame using PnP
+    Frame* key_frame = kf->getFrame();
+    vector<DMatch> curr_matches = matches;
+    vector<DMatch> key_matches = key_frame->getMatches();
+    int size_kpts = key_frame->getKeyPoints().size();
 
-	/* for(int i = 0; i< size_kpts; i++) {
-	 cout << i << " " << flag_key[i] << " -- " << flag_curr[i] << endl;
-	 } */
-	// check for float or double
-	vector<Point2f> corresp_2d;
-	vector<Point3f> corresp_3d;
-	Mat points3d = kf->get3DPointsGlobal();
+    vector<int> flag_key(size_kpts, -1);
+    vector<int> flag_curr(size_kpts, -1);
+    int i = 0;
+    for (auto it : key_matches) {
+        flag_key[it.queryIdx] = i++;
+    }
+    i = 0;
+    for (auto it : curr_matches) {
+        flag_curr[it.queryIdx] = i++;
+    }
 
-	//cout << __func__ <<  points3d << endl;
-	//cout << __func__ << __LINE__ << ": size_kpts " << size_kpts << endl;
-	//cout << __func__ << " "  << points3d.rows << " " << key_matches.size() << " " << curr_matches.size() << endl;
+    // check for float or double
+    vector<Point2f> corresp_2d;
+    vector<Point3f> corresp_3d;
+    Mat points3d = kf->get3DPointsGlobal();
 
-	uint32_t counter = 0;
-	for (int i = 0; i < size_kpts; i++) {
-		if (flag_key[i] >= 0 && flag_curr[i] >= 0) {
-			int id_3d = flag_key[i];
-			if (points3d.at<float>(id_3d, 2) > 0) {
-				//making sure the camera points are in front of the camera
-				corresp_3d.push_back(
-						Point3f(points3d.at<float>(id_3d, 0),
-								points3d.at<float>(id_3d, 1),
-								points3d.at<float>(id_3d, 2)));
-				int id_2d = flag_curr[i];
-				int curr_id = curr_matches.at(id_2d).trainIdx;
-				corresp_2d.push_back(
-						Point2f(this->kpts[curr_id].pt.x,
-								this->kpts[curr_id].pt.y));
+    uint32_t counter = 0;
+    for (int i = 0; i < size_kpts; i++) {
+        if (flag_key[i] >= 0 && flag_curr[i] >= 0) {
+            int id_3d = flag_key[i];
+            corresp_3d.push_back(
+                    Point3f(points3d.at<float>(id_3d, 0),
+                            points3d.at<float>(id_3d, 1),
+                            points3d.at<float>(id_3d, 2)));
+            int id_2d = flag_curr[i];
+            int curr_id = curr_matches.at(id_2d).trainIdx;
+            corresp_2d.push_back(
+                    Point2f(this->kpts[curr_id].pt.x,
+                            this->kpts[curr_id].pt.y));
 
-				counter++;
-			}
-		}
-	}
+            counter++;
+        }
+    }
 
-	// Find the camera Pose using RANSAC PnP
-	int iterationsCount = 100;        // number of Ransac iterations.
-	float reprojectionError = 8.0; // maximum allowed distance to consider it an inlier.
-	float confidence = 0.99;
-	Mat M1 = kf->getProjectionMat();
-	Mat K = M1(Rect(0, 0, 3, 3));
-	Mat distCoeffs = Mat::zeros(4, 1, CV_64FC1); // vector of distortion coefficients
-	Mat rvec = Mat::zeros(3, 1, CV_64FC1);     // output rotation vector
-	Mat tvec = Mat::zeros(3, 1, CV_64FC1);  // output translation vector
-	bool useExtrinsicGuess = false;
+    // Find the camera Pose using RANSAC PnP
+    int iterationsCount = 100;        // number of Ransac iterations.
+    float reprojectionError = 8.0; // maximum allowed distance to consider it an inlier.
+    float confidence = 0.99;
+    Mat M1 = kf->getProjectionMat();
+    Mat K = M1(Rect(0, 0, 3, 3));
+    Mat distCoeffs = Mat::zeros(4, 1, CV_64FC1); // vector of distortion coefficients
+    Mat rvec = Mat::zeros(3, 1, CV_64FC1);     // output rotation vector
+    Mat tvec = Mat::zeros(3, 1, CV_64FC1);  // output translation vector
+    bool useExtrinsicGuess = false;
 
-	solvePnPRansac(Mat(corresp_3d), Mat(corresp_2d), K, distCoeffs, rvec, tvec,
-			useExtrinsicGuess, iterationsCount, reprojectionError, confidence);
-	Mat R;
-	Rodrigues(rvec, R); // R is 3x3
-	R = R.t();  // rotation of inverse
-	tvec = -R * tvec; // translation of inverse
-	T = Mat::eye(4, 4, R.type()); // T is 4x4
-	T(Range(0, 3), Range(0, 3)) = R * 1; // copies R into T
-	T(Range(0, 3), Range(3, 4)) = tvec * 1; // copies tvec into T
+    solvePnPRansac(Mat(corresp_3d), Mat(corresp_2d), K, distCoeffs, rvec, tvec,
+            useExtrinsicGuess, iterationsCount, reprojectionError, confidence);
+    Mat R;
+    Rodrigues(rvec, R); // R is 3x3
+    R = R.t();  // rotation of inverse
+    tvec = -R * tvec; // translation of inverse
+    T = Mat::eye(4, 4, R.type()); // T is 4x4
+    T(Range(0, 3), Range(0, 3)) = R * 1; // copies R into T
+    T(Range(0, 3), Range(3, 4)) = tvec * 1; // copies tvec into T
 
-	cout << __func__ << ": local T : \n" << T << endl;
-	Mat parentT = this->getKeyFrame()->getPoseKF();
-	parentT.convertTo(parentT, CV_64F);
+    Mat parentT = this->getKeyFrame()->getPoseKF();
+    parentT.convertTo(parentT, CV_64F);
 
-	//T = T * parentT;
+    //T = T * parentT;
 
-	return T;
+    return T;
 }
 
 vector<KeyPoint> Frame::getKeyPoints() {
@@ -594,4 +583,117 @@ vector<DMatch>& Frame::getMatches() {
 
 KeyFrame* Frame::getKeyFrame() {
 	return kf;
+}
+
+bool Frame::isKeyframeWorthy() {
+    uint32_t match_size = matches.size();
+    uint32_t kpts_size = this->kf->getFrame()->kpts.size();
+    double ratio = 0.15;
+
+    bool answer = (match_size<=ratio*kpts_size);
+
+    cout << "match_size = " << match_size << " === kpts_size = " << kpts_size << endl;
+
+    if(answer) {
+        cout << " xxxxx creating a new keyframe" << endl;
+    }
+
+    return answer;
+}
+
+// The keyframe variant
+void Frame::setupGlobalCorrespondences(int32_t *corresp) {
+    this->point_cloud_correspondence = corresp;
+}
+
+// The generic frame variant
+void Frame::setupGlobalCorrespondences() {
+    vector<KeyPoint> kf_kpts = kf->frame->kpts;
+    vector<KeyPoint> this_kpts = kpts;
+
+    point_cloud_correspondence = new int32_t[kpts.size()];
+    memset(point_cloud_correspondence, -1, sizeof(int32_t)*kpts.size());
+    for(auto it=matches.begin();it!=matches.end();++it) {
+        DMatch match = *it;
+        uint32_t idx_kf = match.queryIdx;
+        uint32_t idx_curr = match.trainIdx;
+
+        point_cloud_correspondence[idx_curr] = kf->frame->point_cloud_correspondence[idx_kf];
+    }
+
+    cout << "Successfully setup teh problem here" << endl;
+    return;
+}
+
+void Frame::computeReprojectionError(Map* map) {
+    // Now that we have the 3D points, the projection matrix and the observations
+    // we can calculate the reprojection error
+
+
+    Mat K(Matx33d(7.188560000000e+02, 0.000000000000e+00, 6.071928000000e+02,
+                  0.000000000000e+00, 7.188560000000e+02, 1.852157000000e+02,
+                  0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00));
+
+    // TODO why does this work?
+    Mat Rt = getPose().inv();
+
+    Mat P = K*Rt(Range(0, 3), Range(0, 4));
+
+    cout << "P = " << P << endl;
+
+    uint32_t start = 0;
+    uint32_t maxcount = kpts.size();
+    if(timestamp==0) {
+        maxcount = kpts.size();
+    }
+
+    uint32_t img_width  = frame.cols;
+    uint32_t img_height = frame.rows;
+
+    do {
+        Mat visual;
+        frame.copyTo(visual);
+        for(int i=start;i<start+maxcount;i++) {
+
+            int32_t idx = point_cloud_correspondence[i];
+
+            // Nothing to be done here
+            if(idx == -1) {
+                //line(visual, kpts[i].pt, kpts[i].pt, Scalar(0, 255, 0), 1);
+                continue;
+            }
+
+            Point3f pt3d = map->pt3d[idx];
+            Mat pt_homogenous(4, 1, CV_64FC1, Scalar(0));
+            pt_homogenous.at<double>(0, 0) = pt3d.x;
+            pt_homogenous.at<double>(1, 0) = pt3d.y;
+            pt_homogenous.at<double>(2, 0) = pt3d.z;
+            pt_homogenous.at<double>(3, 0) = 1;
+
+            Mat pt_reproj = P*pt_homogenous;
+            double x = pt_reproj.at<double>(0, 0);
+            double y = pt_reproj.at<double>(1, 0);
+            double w = pt_reproj.at<double>(2, 0);
+
+            Point2f pt2d(x/w, y/w);
+
+            line(visual, pt2d, kpts[i].pt, Scalar(0, 0, 255), 2);
+
+            // The observed keypoint
+            line(visual, kpts[i].pt, kpts[i].pt, Scalar(0, 255, 255), 3);
+
+            // The reprojected point
+            line(visual, pt2d, pt2d, Scalar(255, 0, 0), 3);
+
+            // From keypoint
+            //Point2f kfpt = this->kf->frame->kpts[i].pt;
+            //line(visual, kfpt, kfpt, Scalar(0, 0, 255), 3);
+        }
+
+        imshow("visualize reprojection", visual);
+        waitKey(0);
+
+        cout << "Loading another batch" << endl;
+        start += maxcount;
+    } while(start+maxcount < kpts.size());
 }

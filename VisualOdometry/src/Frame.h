@@ -20,11 +20,13 @@
 #include <ctype.h>
 #include <fstream>
 #include "KeyFrame.h"
+#include "Map.h"
 
 using namespace std;
 using namespace cv;
 
 class KeyFrame;
+class Map;
 
 class Frame {
 public:
@@ -44,6 +46,12 @@ public:
 	Mat ransacTest(const vector<DMatch>& matches, const vector<KeyPoint>& keypoints1,
 			const vector<KeyPoint>& keypoints2, vector<DMatch>& outMatches,
 			vector<Point2f>& points1, vector<Point2f>& points2);
+
+    void set_keyframe() { bIsKeyframe = true; }
+    bool is_keyframe() { return bIsKeyframe; }
+
+    int32_t *point_cloud_correspondence;
+
 public:
 	Frame(int, string filename);
 	Mat& getFrame();
@@ -53,7 +61,7 @@ public:
 	void setKeyFrame(KeyFrame* kf);
 	vector<DMatch>& getMatches();
 	Mat& getDesc();
-	Mat& getPose();
+	Mat getPose();
     void setPose(const Mat& pose);
 	Mat& getCameraPose(vector<vector<Point2f>> matches);
 	bool isKeyFrame();
@@ -63,6 +71,13 @@ public:
 	virtual ~Frame();
     void getObservedCorrespondingTo3DPoints(double*);
     void getCorrect3DPointOrdering(double* ret);
+    bool isKeyframeWorthy();
+
+    void setupGlobalCorrespondences(int32_t*);
+    void setupGlobalCorrespondences();
+    void computeReprojectionError(Map* map);
+
+    bool bIsKeyframe = false;
 };
 
 #endif /* FRAME_H_ */

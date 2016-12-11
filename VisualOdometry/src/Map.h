@@ -2,7 +2,7 @@
  * Map.h
  *
  *  Created on: Nov 26, 2016
- *      Author: jaiprakashgogi
+ *      Author: jaiprakashgogi, Utkarsh Sinha
  */
 
 #ifndef MAP_H_
@@ -12,10 +12,16 @@
 #include <vector>
 #include "KeyFrame.h"
 
+class KeyFrame;
+
+#include <opencv2/opencv.hpp>
+
 using namespace std;
+using namespace cv;
 
 class Map {
-	vector<Point3f> pt3d;
+public:
+    vector<Point3f> pt3d;
 	vector<KeyFrame *> mapkeyFrames;
 	Mat getTfromCommon3D(vector<Mat> _points3d);
 	viz::Viz3d myWindow;

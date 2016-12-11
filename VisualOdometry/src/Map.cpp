@@ -33,32 +33,82 @@ void Map::registerCurrentKeyFrame() {
 	if (mapkeyFrames.size() < 2) {
 		cout << __func__ << ": Only one keyframe" << endl;
 
-		Mat pts = mapkeyFrames[0]->get3DPointsGlobal();
-		int npoints = pts.rows;
-		for (int i = 0; i < npoints; i++) {
-			pt3d.push_back(
-					Point3f(pts.at<float>(i, 0), pts.at<float>(i, 1),
-							pts.at<float>(i, 2)));
-		}
+        Mat pts = mapkeyFrames[0]->get3DPointsGlobal();
+        int npoints = pts.rows;
+        int total_kpts = mapkeyFrames[0]->frame->kpts.size();
+        int32_t *kf_idx_to_3d = new int32_t[total_kpts];
+        memset(kf_idx_to_3d, -1, sizeof(int32_t)*total_kpts);
+        vector<DMatch> matches = mapkeyFrames[0]->frame->matches;
+        int i=0;
+        for(auto it=matches.begin();it!=matches.end();++it) {
+            DMatch match = *it;
+            uint32_t idx_prev_kf = match.queryIdx;
+            uint32_t idx_curr_kf = match.trainIdx;
+
+            pt3d.push_back(Point3f(pts.at<float>(i, 0),
+                                   pts.at<float>(i, 1),
+                                   pts.at<float>(i, 2)));
+          
+            kf_idx_to_3d[idx_prev_kf] = i;
+            i++; 
+        }
+
+        mapkeyFrames[0]->frame->setupGlobalCorrespondences(kf_idx_to_3d);
 		return;
 	}
 
 	int curr_id = mapkeyFrames.size() - 1;
+	int prev_id = mapkeyFrames.size() - 2;
+
 	KeyFrame* curr_kf = mapkeyFrames.at(curr_id);
+
+    KeyFrame* prev_kf = nullptr;
+    if(prev_id >= 0) {
+        prev_kf = mapkeyFrames.at(prev_id);
+    }
 
 	//Find common points between the two keyframes
 	//vector<Mat> _points3d = curr_kf->getCommon3DPoints();
 	//Mat T = getTfromCommon3D(_points3d);
 	//curr_kf->setGlobalTransformation(T);
 
-	Mat new_pts = curr_kf->getNew3DPoints();
-	cout << "New point size = " << new_pts.size() << endl;
-	int npoints = new_pts.rows;
-	for (int i = 0; i < npoints; i++) {
-		pt3d.push_back(
-				Point3f(new_pts.at<float>(i, 0), new_pts.at<float>(i, 1),
-						new_pts.at<float>(i, 2)));
-	}
+    Mat new_pts = curr_kf->getNew3DPoints();
+    int npoints = new_pts.rows;
+    cout << "New point size = " << new_pts.size() << endl;
+
+    int not_found_count = 0;
+    int found_count = 0;
+    int32_t *kf_idx_to_3d = new int32_t[npoints];
+    for(int i=0;i<npoints;i++) {
+        float type = new_pts.at<float>(i, 0);
+
+        if(type == 1) {
+            // Type = 1 is a new point
+            pt3d.push_back(Point3f(new_pts.at<float>(i, 1),
+                                   new_pts.at<float>(i, 2),
+                                   new_pts.at<float>(i, 3)));
+            kf_idx_to_3d[i] = pt3d.size() - 1;
+        } else if(type == 2) {
+            // Type = 2 is an existing point
+            if(prev_kf == nullptr) {
+                cout << "PANIC PANIC PANIC - we shouldn't reach here if there doesn't exist a previous keyframe!" << endl;
+                continue;
+            }
+
+            int32_t prev_kpt_id = (int32_t)new_pts.at<float>(i, 1);
+            kf_idx_to_3d[i] = prev_kf->frame->point_cloud_correspondence[prev_kpt_id];
+
+            // Find the match between the previous keyframe and this point
+        } else {
+            kf_idx_to_3d[i] = -1;
+        }
+    }
+
+    curr_kf->frame->setupGlobalCorrespondences(kf_idx_to_3d);
+
+    cout << "Found count = " << found_count << endl;
+    cout << "Not found count = " << not_found_count << endl;
+
 	return;
 }
 
