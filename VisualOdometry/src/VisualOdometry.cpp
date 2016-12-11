@@ -194,6 +194,7 @@ int main(int argc, char* argv[]) {
         string f = filenames[i];
         Frame* frame = new Frame(i, f);
 
+<<<<<<< HEAD
 		imshow("curr_frame", frame->getFrame());
 		if (i == start_frame) {
 			curr_kf = new KeyFrame(i, frame);
@@ -244,6 +245,42 @@ int main(int argc, char* argv[]) {
 			GlobalMap->renderKFCameras();
 
 		} else if (frame->getKeyFrame()->has3DPoints()) {
+=======
+        if(i == start_frame) {
+            curr_kf = new KeyFrame(i, frame);
+            curr_kf->setPrevKeyFrame(nullptr);
+        }
+
+        frame->setKeyFrame(curr_kf);
+        if (curr_kf) {
+            curr_kf->addFrames(frame);
+        }
+
+        uint32_t start = getTickCount();
+        frame->extractFeatures();
+        uint32_t end = getTickCount();
+        //cout << "Extracting features took " << (end-start)/(getTickFrequency()) << "s" << endl;
+
+        // Match features
+        start = getTickCount();
+        vector<vector<Point2f>> matches = frame->matchFeatures();
+        end = getTickCount();
+        //cout << "Feature matching took " << (end-start)/(getTickFrequency()) << "s" << endl;
+        
+        prev_frame_history.push_back(frame);
+
+        while(prev_frame_history.size() > BUNDLE_ADJUST_WINDOW_SIZE) {
+            prev_frame_history.erase(prev_frame_history.begin());
+        }
+
+#if USE_DYNAMIC_KEYFRAME_GENERATION == true
+        if(i==start_frame || frame->isKeyframeWorthy()) {
+#else
+        if (i % KEYFRAME_FREQ == 0) {   //every 5th frame is a keyframe
+#endif
+            // We're on a keyframe
+            Mat T;
+>>>>>>> 5991a08b63ae1ecab9fe287fb65a5f71fc0f20c5
 
 			Mat T = frame->getPose();
 			end = getTickCount();
@@ -298,6 +335,15 @@ int main(int argc, char* argv[]) {
                     viz::Color::yellow());
             GlobalMap->renderCurrentCamera(camPos, cam_pose);
             GlobalMap->setViewerPose(cam_pose);
+<<<<<<< HEAD
+=======
+
+                        //myWindow.setViewerPose(viewer_pose);
+            frame->setupGlobalCorrespondences();
+        }
+
+        frame->computeReprojectionError(GlobalMap);
+>>>>>>> 5991a08b63ae1ecab9fe287fb65a5f71fc0f20c5
 
                         //myWindow.setViewerPose(viewer_pose);
             frame->setupGlobalCorrespondences();
