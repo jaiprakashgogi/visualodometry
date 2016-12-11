@@ -209,12 +209,8 @@ vector<vector<Point2f>> Frame::matchFeatures(Frame* frame2,
 		drawMatches(frame1->getFrame(), kpts1, frame2->getFrame(), kpts2,
 				*match, res);
 	}
-<<<<<<< HEAD
 	imshow("res", res);
-=======
 
-	//imshow("res", res);
->>>>>>> 5991a08b63ae1ecab9fe287fb65a5f71fc0f20c5
 	result.push_back(points1);
 	result.push_back(points2);
 	return result;
@@ -464,13 +460,10 @@ void Frame::setPose(const Mat& pose) {
 	return;
 }
 
-<<<<<<< HEAD
 int Frame::getTimeStamp() {
 	return timestamp;
 }
 
-=======
->>>>>>> 5991a08b63ae1ecab9fe287fb65a5f71fc0f20c5
 Mat Frame::getPose() {
     if(T.data != nullptr) {
         cout << " returning the already existing pose" << endl;
