@@ -288,6 +288,17 @@ void Map::renderCurrentKF() {
     myWindow.spinOnce(1, true);
 }
 
+void Map::saveScreenshot() {
+    char* fname = new char[256];
+    sprintf(fname, "./shot-%04d.png", frame_counter);
+    cout << "Saving to file = " << fname << endl;
+
+    if(frame_counter >= 1) {
+        string fn(fname);
+        myWindow.saveScreenshot(fn);
+    }
+}
+
 void Map::incrementTimestamp() {
 	this->frame_counter++;
 }

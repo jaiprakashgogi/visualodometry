@@ -43,6 +43,7 @@ public:
 	void renderKFCameras();
 	void setViewerPose(Affine3d viewer_pose);
 	void setMode(MODE);
+    void saveScreenshot();
 	Map::MODE getMode();
 	virtual ~Map();
 };

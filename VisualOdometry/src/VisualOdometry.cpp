@@ -218,7 +218,7 @@ int main(int argc, char* argv[]) {
                 << "s" << endl;
 
 
-        Affine3d top_down = cv::viz::makeCameraPose(Vec3d(-10, 750, -10), Vec3d(0, 0, 0), Vec3d(0, -1, 0));
+        Affine3d top_down = cv::viz::makeCameraPose(Vec3d(10, 1000, 10), Vec3d(0, 0, 0), Vec3d(0, 1, 0));
         GlobalMap->setViewerPose(top_down);
 
         //imshow("curr_frame", frame->getFrame());
@@ -297,6 +297,7 @@ int main(int argc, char* argv[]) {
             while(!positioned && waitKey(1) != int(' ')) {
                 GlobalMap->renderCurrentKF();
             }
+            GlobalMap->saveScreenshot();
             GlobalMap->incrementTimestamp();
             positioned = true;
 

@@ -54,6 +54,18 @@ BundleAdjust::BundleAdjust() {
 
 BundleAdjust::~BundleAdjust() {
 	// TODO Auto-generated destructor stub
+
+    if(point_3d != nullptr) {
+        delete[] point_3d;
+    }
+
+    if(point_2d != nullptr) {
+        delete[] point_2d;
+    }
+
+    if(camera_matrices != nullptr) {
+        delete[] camera_matrices;
+    }
 }
 
 void BundleAdjust::allocate2dPoints() {
