@@ -87,17 +87,30 @@ In many such applications, understanding the scene is not important. Localizing 
 Put an overall system diagram here.
 
 \subsection{Feature Extraction and Matching}
-We have experimented with OpenCV KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames using optical flow. For AKAZE\cite{akaze} and ORB features, the correspondences are found using feature matching. The outliers are removed using the epipolar constraints and finding unique matches i.e. feature from first image matches to a unique feature in second image and vice-versa.
+We have experimented with KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames using optical flow. For AKAZE\cite{akaze} and ORB features, the correspondences are found using feature matching. Experimentally, we found that AKAZE was able to generate good matches and in greater number than the other two approaches for the datasets we were using.
 
-\subsection{3D reconstruction}
-Using the feature matching, we can triagulate the points. The fundamental matrix gives the relationship between the feature points. We used RANSAC based 8-point algorithm to find the fundamental matrix.
+To remove outliers from the matches, we used three tests. The first is the \textbf{ratio test} which ensures that the feature is discriminative enough. This is accomplished by calculating the ratio of the distances between the best match and the second best match for a feature. A discriminative feature would have a high ratio and thus be a good feature to keep.
 
-This gives rise to four possible camera configurations (with $W$/$W^T$ and $\pm t$). The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
+The second test is the \textbf{symmetry test} where we ensure that matches from image $\textbf{I}_i$ to $\textbf{I}_j$ also match in the reverse direction - that is from $\textbf{I}_j$ to $\textbf{I}_i$. The third test is the \textbf{epipolar test} where we discard matches that do not satisfy the epipolar geometry of the two frames used for 3D reconstruction.
 
-We have two configurations for 3D reconstruction. One uses a stereo pair and the other uses monocular. Put an image here.
+\textbf{Put an image of matches}
+
+\subsection{Three dimensional reconstruction}
+Using the feature matching, we can triagulate the points. The fundamental matrix gives the relationship between the feature points. We use a RANSAC based 8-point algorithm to find the fundamental matrix.
+
+Using this fundamental matrix, we can estimate the camera pose between the two images. However, this gives rise to four possible camera configurations (with $W$/$W^T$ and $\pm t$). The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
+
+We use 3D reconstruction in two modes: one with stereo image pairs and one with a monocular images. Reconstruction in both modes was successful. However, as hypothesized, we noticed qualititively that the monocular 3D reconstruction had more drift compared to the stereo reconstruction.
+
+We run 3D reconstruction only on keyframes. A new keyframe is created everytime the number of matches to the previous keyframe goes below a certain threshold. Currently, we use a threshold of 45\%. This results in a stable reconstruction and allows for registering the different pointclouds together as well.
+
+\subsection{Point cloud registration}
+Something here\\
 
 \subsection{Camera pose recovery}
-Once the scene is reconstructed using the keyframes, the camera pose can be recovered using Perspective-n-point (PnP) algorithms. By knowing the 3D points from the reconstruction, and its corresponding feature location in any image the camera pose can be recovered using PnP.
+Once the scene is reconstructed using the keyframes, the camera pose for normal frames can be recovered using Perspective-n-point (PnP) algorithms. By knowing the 3D points from the reconstruction, and its corresponding feature location in any image the camera pose can be recovered using PnP.
+
+We chain these camera poses together to produce an initial guess of the camera trajectory. The trajectory from such chaining drifts as the sequence proceeds and errors accumulate. To account for these errors in the camera projection matrix (and also the point cloud reconstruction), we use bundle adjustment over the past m frames.
 
 \subsection{Bundle Adjustment}
 In visual odometry, the current camera pose is obtained by adding the last observed motion to the current detection change. This leads to a superlinear increase in pose error over time. In this section, we look at the techniques we intend to use to correct this pose drift.
@@ -107,8 +120,10 @@ One solution is to use bundle adjustment to impose geometrical constraints over 
 We use a local bundle adjustment that affects the global point cloud and the recent m camera poses. We track visibility of 3D points in each frame and use that to construct a cost function.
 
 \begin{align*}
-    &\min_{\textbf{M}_i, \textbf{X}_j} \sum_i \sum_j
+    &\min_{\textbf{M}_i, \textbf{X}_j} \sum_i \sum_j || \textbf{x}^{i}_{j} - \textbf{M}^{i} \textbf{X}_j||^{2}_{2}
 \end{align*}
+
+After accounting for visibility of keypoints, our optimization has about fifteen thousand variables. We use the dense schur method for optimization and use Ceres solver\cite{ceres-solver}. The optimization is able to reduce reprojection error across multiple frames as shown in \textbf{ADD FIGURE}.
 
 \section{Results}
 So far, we have been working with the datasets available online. The results are illustrated on the Middlebury Temple dataset \cite{middlebury}. We first find the feature correspondences and then remove the outliers using Epipolar constraints. The outliers can be found by using a threshold on distance from epipolar line and along the epipolar line.
@@ -117,13 +132,14 @@ We are able to recosntruct the temple structure using the two keyframes (handpic
 
 
 \section{Future Work}
-Until now, we have evaluated the various landmark tracking techniques on the Temple dataset. We intend to test the different techniques across multiple datasets and pick an algorithm that works best.
 
-We will integrate Ceres solver by Google for local bundle adjustment. This would improve the localization of the camera and generate a better tracking of the scene.
+Currently, we calculate the fundamental matrix using the Ransac version of the 8-point algorithm. However, it is possible to improve upon this by using the three-point algorithm. This requires integration with the IMU as an additional clue for estimating the fundamental matrix.
 
-If time permits, we also intend to integrate intertial sensors readily available on mobile devices to improve the estimate\cite{tumsensor} \cite{ceres-solver}.\\
+Another area to improve is selecting when to generate a new keyframe. We use the number of keyframe feature matches as the selection criteria. A more mathematically grounded technique would be to use the covariance of the various points to do this.
 
+Our data structures used for storing point correspondences, the 3D point cloud, etc can be made much more memory and complexity efficient. While this wouldn't contribute to computer vision, it would allow us to run experiments faster and better tune the algorithm to be more generic.
 
+Finally, we hope to model the point cloud as probability densities or planes. This would reduce the memory footprint and potentially improve the quality of pose estimation.
 
 \bibliographystyle{unsrt}
 \bibliography{nips_2016}
