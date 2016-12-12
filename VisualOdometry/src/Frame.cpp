@@ -466,15 +466,15 @@ int Frame::getTimeStamp() {
 
 Mat Frame::getPose() {
     if(T.data != nullptr) {
-        cout << " returning the already existing pose" << endl;
         return T;
     }
 
-    if(is_keyframe()) {
+
+    /*if(is_keyframe()) {
         cout << "Returning the parent's pose" << endl;
         Mat pose = kf->getPoseKF();
         return pose;
-    }
+    }*/
 
     // Get the pose of the Frame using PnP
     Frame* key_frame = kf->getFrame();
@@ -605,6 +605,14 @@ bool Frame::isKeyframeWorthy() {
 // The keyframe variant
 void Frame::setupGlobalCorrespondences(int32_t *corresp) {
     this->point_cloud_correspondence = corresp;
+
+    bool printed = false;
+    for(int i=0;i<kpts.size();i++) {
+        if(!printed && point_cloud_correspondence[i] > 10000) {
+            cout << "we got a problem here" << endl;
+            printed = true;
+        }
+    }
 }
 
 // The generic frame variant
@@ -614,12 +622,14 @@ void Frame::setupGlobalCorrespondences() {
 
     point_cloud_correspondence = new int32_t[kpts.size()];
     memset(point_cloud_correspondence, -1, sizeof(int32_t)*kpts.size());
+
     for(auto it=matches.begin();it!=matches.end();++it) {
         DMatch match = *it;
         uint32_t idx_kf = match.queryIdx;
         uint32_t idx_curr = match.trainIdx;
 
-        point_cloud_correspondence[idx_curr] = kf->frame->point_cloud_correspondence[idx_kf];
+        auto value = kf->frame->point_cloud_correspondence[idx_kf];
+        point_cloud_correspondence[idx_curr] = value;
     }
 
     cout << "Successfully setup teh problem here" << endl;
@@ -635,8 +645,14 @@ void Frame::computeReprojectionError(Map* map) {
                   0.000000000000e+00, 7.188560000000e+02, 1.852157000000e+02,
                   0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00));
 
+
     // TODO why does this work?
-    Mat Rt = getPose().inv();
+    Mat Rt;
+    if(is_keyframe()) {
+        Rt = kf->getPoseKF().inv();
+    } else {
+        Rt = getPose().inv();
+    } 
 
     Mat P = K*Rt(Range(0, 3), Range(0, 4));
 
@@ -648,21 +664,29 @@ void Frame::computeReprojectionError(Map* map) {
         maxcount = kpts.size();
     }
 
+    cout << "maxcount = " << maxcount << endl;
+
     uint32_t img_width  = frame.cols;
     uint32_t img_height = frame.rows;
+
+    Point3f p3 = map->pt3d[point_cloud_correspondence[0]];
+    cout << "first 3d point = " << p3.x << ", " << p3.y << ", " << p3.z << endl;
 
     do {
         Mat visual;
         frame.copyTo(visual);
         for(int i=start;i<start+maxcount;i++) {
-
+            //cout << "done here = " << i << endl;
             int32_t idx = point_cloud_correspondence[i];
+            //cout << "done here = " << idx << endl;
 
             // Nothing to be done here
-            if(idx == -1) {
+            if(idx == -1 || idx > 10000) {
                 //line(visual, kpts[i].pt, kpts[i].pt, Scalar(0, 255, 0), 1);
                 continue;
             }
+
+            //cout << "idx = " << idx << endl;
 
             Point3f pt3d = map->pt3d[idx];
             Mat pt_homogenous(4, 1, CV_64FC1, Scalar(0));
@@ -691,8 +715,10 @@ void Frame::computeReprojectionError(Map* map) {
             //line(visual, kfpt, kfpt, Scalar(0, 0, 255), 3);
         }
 
-        imshow("visualize reprojection", visual);
-        waitKey(0);
+        //if(timestamp%5 == 0) {
+            imshow("visualize reprojection", visual);
+            waitKey(0);
+        //}
 
         cout << "Loading another batch" << endl;
         start += maxcount;

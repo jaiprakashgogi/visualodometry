@@ -8,6 +8,9 @@
 #ifndef BUNDLEADJUST_H_
 #define BUNDLEADJUST_H_
 
+#include "Frame.h"
+#include "Map.h"
+
 #include <ceres/ceres.h>
 #include <glog/logging.h>
 #include <iostream>
@@ -21,7 +24,7 @@ public:
 	BundleAdjust();
 	virtual ~BundleAdjust();
 
-    void execute() const;
+    void execute(vector<Frame*>) const;
     void setCameraCount(int);
     void setPointCount(int);
     void setInitialCameraEstimate(int i, double* camera);
@@ -30,6 +33,9 @@ public:
     void allocate2dPoints();
 
     void getAdjustedCameraMatrix(int i, cv::Mat& cam);
+    void getAdjusted3DPoint(int i, cv::Point3f& cam);
+
+    void extractResults(vector<Frame*>, Map*);
 
 private:
     int num_cameras = 0;

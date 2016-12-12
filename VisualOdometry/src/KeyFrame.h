@@ -29,6 +29,7 @@ public:
 	KeyFrame* prev_kf = nullptr;
 	//vector<Mat> points3D;
 	vector<Frame*> frameVec;
+    vector<DMatch> keyframe_match;
 	Mat T;
 	Mat M1, M2;
 	Mat point3D;

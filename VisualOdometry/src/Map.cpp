@@ -17,7 +17,7 @@ Map::Map() :
 }
 
 Map::~Map() {
-	// TODO Auto-generated destructor stub
+    // TODO Auto-generated destructor stub
 }
 
 void Map::setMode(MODE _mode) {
@@ -29,26 +29,33 @@ Map::MODE Map::getMode() {
 }
 
 int Map::getNumKeyFrames() {
-	return mapkeyFrames.size();
+    return mapkeyFrames.size();
 }
 
 void Map::insertKeyFrame(KeyFrame* kf) {
-	mapkeyFrames.push_back(kf);
+    mapkeyFrames.push_back(kf);
 }
 
 void Map::registerCurrentKeyFrame() {
 	cout << __func__ << ": " << mapkeyFrames.size() << endl;
-	if (mapkeyFrames.size() < 2) {
-		cout << __func__ << ": Only one keyframe" << endl;
+    uint32_t num_keyframes = mapkeyFrames.size();
 
-        Mat pts = mapkeyFrames[0]->get3DPointsGlobal();
+	if (num_keyframes < 2) {
+		cout << __func__ << ": Only two keyframes" << endl;
+
+        KeyFrame* frame_with_recon = mapkeyFrames[0];
+
+        Mat pts = frame_with_recon->get3DPointsGlobal();
         int npoints = pts.rows;
-        int total_kpts = mapkeyFrames[0]->frame->kpts.size();
+
+        int total_kpts = frame_with_recon->frame->kpts.size();
+        cout << "total_kpts = " << total_kpts << endl;
         int32_t *kf_idx_to_3d = new int32_t[total_kpts];
         memset(kf_idx_to_3d, -1, sizeof(int32_t)*total_kpts);
-        vector<DMatch> matches = mapkeyFrames[0]->frame->matches;
+        vector<DMatch> matches = frame_with_recon->frame->matches;
         int i=0;
         for(auto it=matches.begin();it!=matches.end();++it) {
+            //cout << "inside here = " << i << endl;
             DMatch match = *it;
             uint32_t idx_prev_kf = match.queryIdx;
             uint32_t idx_curr_kf = match.trainIdx;
@@ -61,42 +68,136 @@ void Map::registerCurrentKeyFrame() {
             i++; 
         }
 
-        mapkeyFrames[0]->frame->setupGlobalCorrespondences(kf_idx_to_3d);
-		return;
-	}
+        cout << "Done setting up correspondences for the first frame" << endl;
+        frame_with_recon->frame->setupGlobalCorrespondences(kf_idx_to_3d);
+        return;
+    }
 
-	int curr_id = mapkeyFrames.size() - 1;
-	int prev_id = mapkeyFrames.size() - 2;
 
-	KeyFrame* curr_kf = mapkeyFrames.at(curr_id);
+    int curr_id = mapkeyFrames.size() - 1;
+    int prev_id = mapkeyFrames.size() - 2;
+
+    KeyFrame* curr_kf = mapkeyFrames.at(curr_id);
 
     KeyFrame* prev_kf = nullptr;
     if(prev_id >= 0) {
         prev_kf = mapkeyFrames.at(prev_id);
     }
 
-	//Find common points between the two keyframes
-	//vector<Mat> _points3d = curr_kf->getCommon3DPoints();
-	//Mat T = getTfromCommon3D(_points3d);
-	//curr_kf->setGlobalTransformation(T);
+    //Find common points between the two keyframes
+    //vector<Mat> _points3d = curr_kf->getCommon3DPoints();
+    //Mat T = getTfromCommon3D(_points3d);
+    //curr_kf->setGlobalTransformation(T);
 
     Mat new_pts = curr_kf->getNew3DPoints();
     int npoints = new_pts.rows;
     cout << "New point size = " << new_pts.size() << endl;
+    cout << "===================================" << endl;
 
     int not_found_count = 0;
     int found_count = 0;
-    int32_t *kf_idx_to_3d = new int32_t[npoints];
+    cout << "sizeof kf_idx = " << npoints << endl;
+
+    uint32_t old_ptcloud_size = pt3d.size();
+    uint32_t new_ptcloud_size = pt3d.size();
+
     for(int i=0;i<npoints;i++) {
         float type = new_pts.at<float>(i, 0);
+        if(type == 1) {
+            new_ptcloud_size++;
+        } else {
+        }
+    }
+
+    //int32_t *kf_idx_to_3d = new int32_t[new_ptcloud_size];
+    uint32_t num_kpts = curr_kf->frame->kpts.size();
+    int32_t *kf_idx_to_3d = new int32_t[num_kpts];
+    memset(kf_idx_to_3d, -1, sizeof(int32_t)*num_kpts);
+
+    int new_counter = 0;
+    int old_counter = 0;
+    int bad_counter = 0;
+    vector<DMatch> matches_curr = curr_kf->frame->matches;
+    vector<DMatch> matches_prev = prev_kf->frame->matches;
+    vector<DMatch> matches_keyframe = curr_kf->keyframe_match;
+
+    cout << "matches_curr.size() = " << matches_curr.size() << endl;
+    cout << "matches_prev.size() = " << matches_prev.size() << endl;
+    cout << "matches_keyframe.size() = " << matches_keyframe.size() << endl;
+    cout << "Size of new points = " << new_pts.rows << endl;
+
+    for(int i=0;i<num_kpts;i++) {
+        int type = (int)new_pts.at<float>(i, 0);
+        Point3f given(new_pts.at<float>(i, 1),
+                      new_pts.at<float>(i, 2),
+                      new_pts.at<float>(i, 3));
+
+        int id_prev;
+
+        // New point
+        switch(type) {
+            case 1:
+                // This is a new point - so we need to append it
+                pt3d.push_back(given);
+
+                kf_idx_to_3d[i] = pt3d.size() - 1;
+                break;
+
+            case 2:
+                // This point already exists, we need to find the correspondence in the
+                // previous kf_idx_to_3d
+                id_prev = (int)(new_pts.at<float>(i, 4));
+                kf_idx_to_3d[i] = prev_kf->frame->point_cloud_correspondence[id_prev];
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    cout << "Done with correspondences for future frames" << endl;
+    curr_kf->frame->setupGlobalCorrespondences(kf_idx_to_3d);
+
+    /*if(matches_curr.size() != new_pts.rows) {
+        cout << "Something is wrong here" << endl;
+        exit(0);
+    } else {
+        cout << "The size was correct" << endl;
+        exit(0);
+    }*/
+
+    /*for(auto it=matches_keyframe.begin();it!=matches_keyframe.end();++it) {
+        DMatch match = *it;
+        uint32_t idx_query = match.queryIdx;
+        uint32_t idx_train = match.trainIdx;
+
+        float type = new_pts.at<float>(idx_query, 0);
+        if(type ==1) {
+            cout << "There was a problem bruv = " << type << endl;
+        }
+    }*/
+
+    /*for(int i=0;i<num_kpts;i++) {
+        uint32_t idx_query = matches[i].queryIdx;
+        uint32_t idx_train = matches[i].trainIdx;
+
+        float type = new_pts.at<float>(idx_query, 0);
+        cout << "type = " << type << endl;
 
         if(type == 1) {
+            cout << "The first point type" << endl;
+
             // Type = 1 is a new point
-            pt3d.push_back(Point3f(new_pts.at<float>(i, 1),
-                                   new_pts.at<float>(i, 2),
-                                   new_pts.at<float>(i, 3)));
+            pt3d.push_back(Point3f(new_pts.at<float>(idx_query, 1),
+                                   new_pts.at<float>(idx_query, 2),
+                                   new_pts.at<float>(idx_query, 3)));
+
+            uint32_t yoyoyo = new_pts.at<float>(idx_query, 4);
             kf_idx_to_3d[i] = pt3d.size() - 1;
+            new_counter++;
         } else if(type == 2) {
+            cout << "The second point type" << endl;
+
             // Type = 2 is an existing point
             if(prev_kf == nullptr) {
                 cout << "PANIC PANIC PANIC - we shouldn't reach here if there doesn't exist a previous keyframe!" << endl;
@@ -104,20 +205,31 @@ void Map::registerCurrentKeyFrame() {
             }
 
             int32_t prev_kpt_id = (int32_t)new_pts.at<float>(i, 1);
-            kf_idx_to_3d[i] = prev_kf->frame->point_cloud_correspondence[prev_kpt_id];
+            int32_t value = prev_kf->frame->point_cloud_correspondence[prev_kpt_id];
+
+            cout << "value = " << value << endl;
+
+            kf_idx_to_3d[i] = value;
 
             // Find the match between the previous keyframe and this point
+            old_counter++;
         } else {
+            cout << "The third point type" << endl;
             kf_idx_to_3d[i] = -1;
+            bad_counter++;
         }
     }
 
     curr_kf->frame->setupGlobalCorrespondences(kf_idx_to_3d);
 
-    cout << "Found count = " << found_count << endl;
-    cout << "Not found count = " << not_found_count << endl;
+    cout << "new_counter = " << new_counter << endl;
+    cout << "old_counter = " << old_counter << endl;
+    cout << "bad_counter = " << bad_counter << endl;
 
-	return;
+    cout << "Found count = " << found_count << endl;
+    cout << "Not found count = " << not_found_count << endl;*/
+
+    return;
 }
 
 Mat Map::getTfromCommon3D(vector<Mat> _points3d) {
@@ -162,8 +274,8 @@ Mat Map::getTfromCommon3D(vector<Mat> _points3d) {
 }
 
 void Map::renderCurrentKF() {
-	int current_id = mapkeyFrames.size() - 1;
-	//Mat points3D = mapkeyFrames.at(current_id)->get3DPointsGlobal();
+    int current_id = mapkeyFrames.size() - 1;
+    //Mat points3D = mapkeyFrames.at(current_id)->get3DPointsGlobal();
 
 	if (pt3d.size() == 0) {
 		return;
@@ -171,9 +283,9 @@ void Map::renderCurrentKF() {
 
 	Mat points3D(pt3d);
 
-	viz::WCloud cloud_widget(points3D, viz::Color::green());
-	myWindow.showWidget("3D view", cloud_widget);
-	myWindow.spinOnce(1, true);
+    viz::WCloud cloud_widget(points3D, viz::Color::green());
+    myWindow.showWidget("3D view", cloud_widget);
+    myWindow.spinOnce(1, true);
 }
 
 void Map::incrementTimestamp() {
@@ -181,14 +293,15 @@ void Map::incrementTimestamp() {
 }
 
 void Map::setViewerPose(Affine3d viewer_pose) {
-	myWindow.setViewerPose(viewer_pose);
+    myWindow.setViewerPose(viewer_pose);
 }
 
 void Map::renderCurrentCamera(viz::WCameraPosition camPos, Affine3d cam_pose) {
-	string cam_name = "CP" + to_string(cam_count);
-	cam_count++;
-	myWindow.showWidget(cam_name, camPos, cam_pose);
-	myWindow.spinOnce(1, true);
+    string cam_name = "CP" + to_string(cam_count);
+    cout << "Setting the camera name = " << cam_name << endl;
+    cam_count++;
+    myWindow.showWidget(cam_name, camPos, cam_pose);
+    myWindow.spinOnce(1, true);
 }
 
 void Map::renderPointCloud(Mat points3D) {
@@ -218,10 +331,10 @@ void Map::renderKFCameras() {
 	cout << T1 << T2 << endl;
 
 	Affine3d cam_pose_l = Affine3d(Tl);
-	viz::WCameraPosition camPos_l((Matx33d) K, 5.0, viz::Color::red());
+	viz::WCameraPosition camPos_l((Matx33d) K, 5, viz::Color::red());
 	renderCurrentCamera(camPos_l, cam_pose_l);
 	Affine3d cam_pose_r = Affine3d(Tr);
-	viz::WCameraPosition camPos_r((Matx33d) K, 5.0, viz::Color::yellow());
+	viz::WCameraPosition camPos_r((Matx33d) K, 5, viz::Color::yellow());
 	renderCurrentCamera(camPos_r, cam_pose_r);
 	//setViewerPose(cam_pose_r);
 	//waitKey(0);
