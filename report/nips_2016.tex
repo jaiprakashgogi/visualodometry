@@ -20,8 +20,8 @@
 \usepackage{amsfonts}       % blackboard math symbols
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
-%\usepackage{amsmath}
-
+\usepackage{amsmath}
+\usepackage{comment}
 \title{Visual Odometry}
 
 % The \author macro works with any number of authors. There are two
@@ -35,19 +35,18 @@
 % author name.
 
 \author{
+ Utkarsh Sinha \\
+  Robotics Institute\\
+ Carnegie Mellon University \\
+ Pittsburgh, PA 15213\\
+  \texttt{usinha@andrew.cmu.edu} \\
+\And
   Jai Prakash\\
   Robotics Institute\\
   Carnegie Mellon University\\
   Pittsburgh, PA 15213\\
   \texttt{jprakash@andrew.cmu.edu} \\
-  %% examples of more authors
- 	\And
- Utkarsh SInha \\
-  Robotics Institute\\
- Carnegie Mellon University \\
- Pittsburgh, PA 15213\\
-  \texttt{usinha@andrew.cmu.edu} \\
-  %% \AND
+ 	  %% \AND
   %% Coauthor \\
   %% Affiliation \\
   %% Address \\
@@ -83,7 +82,11 @@ In many such applications, understanding the scene is not important. Localizing 
 \section{Background}
 \textbf{Visual SLAM vs. Visual Odometry: } The focus in the visual SLAM techniques is both in reconstruting the scene and also localizing the camera in the scene. However, our main focus is just in localization of the camera. For the scope of the project, we focus only to be locally consistent. So, our system's camera position might drift over time - however, we are only interested in accurate localization in a short timespan. We do not explore ideas like loop closure in this project.
 
-\section{Feature Extraction and Matching}
+
+\section{Our approach}
+Put an overall system diagram here.
+
+\subsection{Feature Extraction and Matching}
 We have experimented with OpenCV KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames using optical flow. For AKAZE\cite{akaze} and ORB features, the correspondences are found using feature matching. The outliers are removed using the epipolar constraints and finding unique matches i.e. feature from first image matches to a unique feature in second image and vice-versa.
 
 \subsection{3D reconstruction}
@@ -91,14 +94,21 @@ Using the feature matching, we can triagulate the points. The fundamental matrix
 
 This gives rise to four possible camera configurations (with $W$/$W^T$ and $\pm t$). The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
 
+We have two configurations for 3D reconstruction. One uses a stereo pair and the other uses monocular. Put an image here.
+
 \subsection{Camera pose recovery}
 Once the scene is reconstructed using the keyframes, the camera pose can be recovered using Perspective-n-point (PnP) algorithms. By knowing the 3D points from the reconstruction, and its corresponding feature location in any image the camera pose can be recovered using PnP.
 
 \subsection{Bundle Adjustment}
 In visual odometry, the current camera pose is obtained by adding the last observed motion to the current detection change. This leads to a superlinear increase in pose error over time. In this section, we look at the techniques we intend to use to correct this pose drift.
 
-One solution is to use bundle adjustment to impose geometrical constraints over multiple
-frames. The computational cost increases with the cube of the number of frames used for computation. Thus, we limit the number of frames to a small window from the previously captured frames. This approach is called local bundle adjustment.
+One solution is to use bundle adjustment to impose geometrical constraints over multiple frames. The computational cost increases with the cube of the number of frames used for computation. Thus, we limit the number of frames to a small window from the previously captured frames. This approach is called local bundle adjustment.
+
+We use a local bundle adjustment that affects the global point cloud and the recent m camera poses. We track visibility of 3D points in each frame and use that to construct a cost function.
+
+\begin{align*}
+    &\min_{\textbf{M}_i, \textbf{X}_j} \sum_i \sum_j
+\end{align*}
 
 \section{Results}
 So far, we have been working with the datasets available online. The results are illustrated on the Middlebury Temple dataset \cite{middlebury}. We first find the feature correspondences and then remove the outliers using Epipolar constraints. The outliers can be found by using a threshold on distance from epipolar line and along the epipolar line.
@@ -111,18 +121,20 @@ Until now, we have evaluated the various landmark tracking techniques on the Tem
 
 We will integrate Ceres solver by Google for local bundle adjustment. This would improve the localization of the camera and generate a better tracking of the scene.
 
-If time permits, we also intend to integrate intertial sensors readily available on mobile devices to improve the estimate\cite{tumsensor}.\\
+If time permits, we also intend to integrate intertial sensors readily available on mobile devices to improve the estimate\cite{tumsensor} \cite{ceres-solver}.\\
 
 
-\iffalse
-{\small{
+
+\bibliographystyle{unsrt}
+\bibliography{nips_2016}
+
+\begin{comment}
 \begin{thebibliography}{15}
 
 \bibitem{Szeliski}
 Szeliski, Richard. \textit{Computer Vision: Algorithms and Applications}. 1st ed. London: Springer-Verlag, 2010. Print.
 
-\bibitem{middlebury} 
-Temple dataset \url{http://vision.middlebury.edu/mview/data/}
+\bibitem{middlebury} Temple dataset \url{http://vision.middlebury.edu/mview/data/}
 
       \bibitem{akaze} P. Alcantarilla, J. Nuevo and A. Bartoli, \textit{Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces}, BMVC 2013
       \bibitem{threepoint} F. Fraundorfer, P. Tanskanen and M. Pollefeys \textit{A minimal case solution to the calibrated relative pose problem for the case of two known orientation angles}, ECCV 2010.
@@ -132,35 +144,9 @@ Temple dataset \url{http://vision.middlebury.edu/mview/data/}
 
        \bibitem{semidense} T. Schops, J. Engel and D. Cremers \textit{Semi-Dense visual odometry for AR on a smartphone}
       \bibitem{tumsensor} P. Tiefenbacher, T. Schulze and G. Rigoll \textit{Off-the-shelf sensor integration for mono-SLAM on Smart Devices}, CVPR 2015
-}
-\fi
+      \end{thebibliography}
+\end{comment}
 
 %\endgroup
-
-\section*{References}
-
-References follow the acknowledgments. Use unnumbered first-level
-heading for the references. Any choice of citation style is acceptable
-as long as you are consistent. It is permissible to reduce the font
-size to \verb+small+ (9 point) when listing the references. {\bf
-  Remember that you can use a ninth page as long as it contains
-  \emph{only} cited references.}
-\medskip
-
-\small
-
-[1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms
-for connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and
-T.K.\ Leen (eds.), {\it Advances in Neural Information Processing
-  Systems 7}, pp.\ 609--616. Cambridge, MA: MIT Press.
-
-[2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS:
-  Exploring Realistic Neural Models with the GEneral NEural SImulation
-  System.}  New York: TELOS/Springer--Verlag.
-
-[3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of
-learning and recall at excitatory recurrent synapses and cholinergic
-modulation in rat hippocampal region CA3. {\it Journal of
-  Neuroscience} {\bf 15}(7):5249-5262.
 
 \end{document}
