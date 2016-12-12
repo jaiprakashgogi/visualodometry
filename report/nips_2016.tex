@@ -22,6 +22,9 @@
 \usepackage{microtype}      % microtypography
 \usepackage{amsmath}
 \usepackage{comment}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
 \title{Visual Odometry}
 
 % The \author macro works with any number of authors. There are two
@@ -74,26 +77,60 @@ In this project, trying to localize the camera using visual odometry. The major 
 
 \section{Introduction}
 
-Augmented reality has been around for years, yet not all problems are solved in the domain. One of the challenges is precise localization of the device in world coordinates. Several augmented reality applications on smartphones are based on markers. One good example of marker-based AR is Vuforia. On the other hand, there are standalone devices like Hololens, which has number of sensors to understand the scene and localize the head mounted display in the scene.
+Augmented reality has been around for years, yet not all problems are solved in the domain. One of the challenges is precise localization of the device in global coordinates. Augmented reality applications on smartphones are often based on markers. One good example of marker-based AR is Vuforia. On the other hand, there are standalone devices like Hololens, which has number of sensors to understand the scene and localize the head mounted display in the scene.
 
-In many such applications, understanding the scene is not important. Localizing the camera in the world is enough to solve certain problems. In this project we focus on localizing the phone camera using the camera and the inertial sensors.
+In such applications, understanding the scene is not critical. Localizing the camera in the world is enough to solve certain problems. In this project we focus on localizing the camera using a sequential set of images.
 
 
 \section{Background}
-\textbf{Visual SLAM vs. Visual Odometry: } The focus in the visual SLAM techniques is both in reconstruting the scene and also localizing the camera in the scene. However, our main focus is just in localization of the camera. For the scope of the project, we focus only to be locally consistent. So, our system's camera position might drift over time - however, we are only interested in accurate localization in a short timespan. We do not explore ideas like loop closure in this project.
+\textbf{SFM}: In structure from motion algorithms, the goal is to generate the scene structure and localize camera positions for each image. The images are in no particular order and can be taken after several timesteps.
+
+\textbf{Visual SLAM}: The focus in the visual SLAM techniques is both in reconstructing the scene and also localizing the camera in the scene. One distinction between SFM and SLAM is that the input images are sequential. This provides us with both challenges like short baselines and additional constraints on the system for faster optimization. Such system also aim to produce dense reconstructions.
+
+\textbf{Visual Odometry}: The goal of visual odometry is to only localize the camera in sequential images. Any 3D reconstruction is only a side effect of the main problem of localization. Usually, only sparse feature matches are enough to solve this task adequately.
+
+For this project, our main focus is on localizing the camera in 3D space. We focus only to be locally consistent. So our system's camera position might drift over time - however, we are only interested in accurate localization in a short timespan on the order of a few seconds. We do not explore ideas like loop closure in this project.
 
 
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{.55\linewidth}
+        \includegraphics[width=\linewidth]{./system.png}
+        \caption{}
+        \label{fig:system}
+    \end{subfigure}
+    \begin{subfigure}[b]{.30\linewidth}
+        \includegraphics[width=\linewidth]{./vo_stereo_5.png}
+        \caption{}
+        \label{fig:firstresult}
+    \end{subfigure}
+    \caption{(a) Overall system architecture. Boxes on the right are what we implemented in this project (b) Results from visual odometry on one of the datasets.}
+\end{figure}
 \section{Our approach}
-Put an overall system diagram here.
+Our overall system consists of multiple algorithms as described in Figure \ref{fig:system}.
 
 \subsection{Feature Extraction and Matching}
-We have experimented with KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames using optical flow. For AKAZE\cite{akaze} and ORB features, the correspondences are found using feature matching. Experimentally, we found that AKAZE was able to generate good matches and in greater number than the other two approaches for the datasets we were using.
+We have experimented with KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames using optical flow. For AKAZE\cite{akaze} and ORB features, the correspondences are found using feature matching. Experimentally, we found that AKAZE was able to generate good matches and in greater number than the other two approaches for the KITTI datasets\cite{kitti}.
 
 To remove outliers from the matches, we used three tests. The first is the \textbf{ratio test} which ensures that the feature is discriminative enough. This is accomplished by calculating the ratio of the distances between the best match and the second best match for a feature. A discriminative feature would have a high ratio and thus be a good feature to keep.
 
-The second test is the \textbf{symmetry test} where we ensure that matches from image $\textbf{I}_i$ to $\textbf{I}_j$ also match in the reverse direction - that is from $\textbf{I}_j$ to $\textbf{I}_i$. The third test is the \textbf{epipolar test} where we discard matches that do not satisfy the epipolar geometry of the two frames used for 3D reconstruction.
+The second test is the \textbf{symmetry test} where we ensure that matches from image $\textbf{I}_i$ to $\textbf{I}_j$ also match in the reverse direction - that is from $\textbf{I}_j$ to $\textbf{I}_i$. The third test is the \textbf{epipolar test} where we discard matches that do not satisfy the epipolar geometry of the two frames used for 3D reconstruction. An example of feature matches is shown in Figure \ref{fig:matches}.
 
-\textbf{Put an image of matches}
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{./matches.png}
+    \caption{An example of feature matches between two consecutive fraames of the KITTI dataset. These are results after all outliers have be removed.}
+    \label{fig:matches}
+\end{figure}
+
+\subsection{Keyframing}
+3D reconstruction is expensive and thus we want to limit it to only a few frames. This is done using keyframing where only specific frames are picked for 3D reconstruction and other frames use the point cloud generated from these frames.
+
+Our first approach was to have every frame be a keyframe - this is expensive to compute since you need to evaluate the feature matches, triangulate points and also recover pose.
+
+Our second approach was to have every 5th frame be a keyframe. This approach worked very well for motion along a straight line but drifted significantly when the camera turned.
+
+Our third approach and current approach is based on the number of feature matches between the current and previous keyframe. If the count is below a certain threshold (45\% in our case), then we trigger creating a new keyframe and the corresponding 3D reconstruction.
 
 \subsection{Three dimensional reconstruction}
 Using the feature matching, we can triagulate the points. The fundamental matrix gives the relationship between the feature points. We use a RANSAC based 8-point algorithm to find the fundamental matrix.
@@ -105,7 +142,17 @@ We use 3D reconstruction in two modes: one with stereo image pairs and one with 
 We run 3D reconstruction only on keyframes. A new keyframe is created everytime the number of matches to the previous keyframe goes below a certain threshold. Currently, we use a threshold of 45\%. This results in a stable reconstruction and allows for registering the different pointclouds together as well.
 
 \subsection{Point cloud registration}
-Something here\\
+As an image sequence proceeds, we use the current keyframe and the previous keyframe (or the current keyframe and the corresponding right-eye image in case of stereo) to reconstruct a point cloud based on feature matches. However, the point clouds might be of a different scale and would need to be registered to a global coordinate system.
+
+One approach to calculate the scale of the point cloud is to fit gaussian on the pairwise distances between 3D points. Using the mean of the distances in the local pointcloud and the global pointcloud, we can calculate the scale. Once we have the scale, we can compute the rotation and translation of the point cloud using the common feature points.
+
+To compute the rotation and translation, something here.
+
+\begin{align*}
+    equation &= something
+\end{align*}
+
+Another approach is to ensure that all projection matrices and transformations occur in one global frame of reference. We assume the first keyframe to be at the origin and chain transformations together to get the current pose.
 
 \subsection{Camera pose recovery}
 Once the scene is reconstructed using the keyframes, the camera pose for normal frames can be recovered using Perspective-n-point (PnP) algorithms. By knowing the 3D points from the reconstruction, and its corresponding feature location in any image the camera pose can be recovered using PnP.
@@ -123,12 +170,52 @@ We use a local bundle adjustment that affects the global point cloud and the rec
     &\min_{\textbf{M}_i, \textbf{X}_j} \sum_i \sum_j || \textbf{x}^{i}_{j} - \textbf{M}^{i} \textbf{X}_j||^{2}_{2}
 \end{align*}
 
-After accounting for visibility of keypoints, our optimization has about fifteen thousand variables. We use the dense schur method for optimization and use Ceres solver\cite{ceres-solver}. The optimization is able to reduce reprojection error across multiple frames as shown in \textbf{ADD FIGURE}.
+After accounting for visibility of keypoints, our optimization has about fifteen thousand variables. We use the dense schur method for optimization and use Ceres solver\cite{ceres-solver}. The optimization is able to reduce reprojection error across multiple frames as shown in Figure \ref{fig:reproj}.
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{.45\textwidth}
+        \includegraphics[width=\linewidth]{./before-ba.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{.45\textwidth}
+        \includegraphics[width=\linewidth]{./after-ba.png}
+        \caption{}
+    \end{subfigure}
+    \caption{(a) Before bundle adjustment, the red lines show the reprojection error between observed keypoints (yellow) and reprojected points (blue). (b) After bundle adjustment, all reprojected points align very closely to the observed feature points}
+    \label{fig:reproj}
+\end{figure}
 
 \section{Results}
 So far, we have been working with the datasets available online. The results are illustrated on the Middlebury Temple dataset \cite{middlebury}. We first find the feature correspondences and then remove the outliers using Epipolar constraints. The outliers can be found by using a threshold on distance from epipolar line and along the epipolar line.
 
 We are able to recosntruct the temple structure using the two keyframes (handpicked for now). The results are shown in figure \ref{fig:reconstruction}. Once the reconstruction is done, we are able to recover the camera poses using PnP algorithm as illustrated in the figure \ref{fig:pose}. We are using OpenCV for feature matching and visualization.
+
+\subsection{Stereo visual odometry}
+In steroscopic visual odometry, we used a stereo pair at every keyframe. The baseline between the stereo pair was about \textbf{WHAT} cm and this helped produce very accurate visual odometry.
+
+We used this experiment as a baseline to test how good the monocular visual odometry is.
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}[b]{.45\textwidth}
+        \includegraphics[width=\linewidth]{./vo_stereo_2.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{.30\textwidth}
+        \includegraphics[width=\linewidth]{./vo_mono_3.png}
+        \caption{}
+    \end{subfigure}
+    \caption{(a) Visual odometry using stereo based reconstruction (b) Using only monocular image pairs}
+\end{figure}
+
+\subsection{Monocular visual odometry}
+With the monocular case, we used the previous keyframe's image instead of the right eye of the stereo pair. Doing this required writing special code to get the system initialized (the first keyframe would have no 3D reconstruction associated with it). However, once initialized, the system works well and produces the familar trajectory.
+
+\subsection{Monocular visual odometry with bundle adjustment}
+To improve results for the monocular visual odometry, we enabled bundle adjustment and executed it on the same datasets as in previous experiments. We found that the results were better qualitatively and produce a good trajectory of the camera.
+
+However, the code execution speed slowed down quite a bit. We found that an optimization over the past 10 frames requires about fifteen thousand variables and takes several milliseconds to execute. We currently optimize over the extrinsic matrix and assume that the intrinsics are known and correct. Our hypothesis is that optimizing over the SE(3) manifold would help converge the optimization in fewer iterations and potentially to a better solution as well. This is because it would enforce the rotation matrix to be orthonormal.
 
 
 \section{Future Work}
