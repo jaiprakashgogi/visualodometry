@@ -204,9 +204,20 @@ Once the scene is reconstructed using the keyframes, the camera pose for normal 
 
 We chain these camera poses together to produce an initial guess of the camera trajectory. The trajectory from such chaining drifts as the sequence proceeds and errors accumulate. To account for these errors in the camera projection matrix (and also the point cloud reconstruction), we use bundle adjustment over the past m frames.
 
-\begin{align*}
-    something &= everything
-\end{align*}
+The rotation and the translation obtained from the PnP algorithm in OpenCV gives the tranformation of the camera with respect to the camera frame of reference. To obtain the motion of the camera with respect to global frame of reference, we can just do the inverse.
+
+$$ T_{camera}  = \begin{bmatrix}
+R_{3\times3} & t \\
+0_{3\times3} & 1
+\end{bmatrix} $$
+
+$$ T_{world}  = \begin{bmatrix}
+R^T  & -R^T t\\
+0_{3\times3} & 1
+\end{bmatrix} $$
+
+
+An illustration of the camera pose recovery is shown in the figure \ref{fig:camerapose}. The green point shows the reconstruction using the keyframe and the intermedite camera pose is obtained using PnP.
 
 \subsection{Bundle Adjustment}
 In visual odometry, the current camera pose is obtained by adding the last observed motion to the current detection change. This leads to a superlinear increase in pose error over time. In this section, we look at the techniques we intend to use to correct this pose drift.
