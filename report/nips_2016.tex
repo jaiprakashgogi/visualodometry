@@ -72,20 +72,22 @@
 \maketitle
 
 \begin{abstract}
-In this project, trying to localize the camera using visual odometry. The major component of the project is to generate keyframes according to pre-defined heuristics and triangulate the points to create 3D reconstruction of the scene. The intermediate frames can be found using Perspective-n-point algorithm. In addition, we also perform local bundle adjustment over last few frames so that the localization is locally consistent. We also plan to exploit the onboard inertial sensors to get prior for the localization.
+In this project, we localize the camera using visual odometry. The major component of the project is to generate keyframes according to pre-defined heuristics and triangulate the points to create 3D reconstruction of the scene. The poses of the intermediate frames can be found using Perspective-n-point algorithm. In addition, we also perform local bundle adjustment over last few frames so that the localization is locally consistent. The stereo mononocular performs the best and is close to the ground-truth when compared to the monocular visual odometry. We also plan to exploit the onboard inertial sensors to get prior for the localization.
 \end{abstract}
 
 \section{Introduction}
 
-Augmented reality has been around for years, yet not all problems are solved in the domain. One of the challenges is precise localization of the device in global coordinates. Augmented reality applications on smartphones are often based on markers. One good example of marker-based AR is Vuforia. On the other hand, there are standalone devices like Hololens, which has number of sensors to understand the scene and localize the head mounted display in the scene.
+Augmented reality has been around for years, yet not all problems are solved in the domain. One of the challenges is precise localization of the device in global coordinates. Augmented reality applications on smartphones are often based on markers. One good example of marker-based AR is Vuforia. On the other hand, there are standalone devices like Hololens, which has number of sensors to understand the scene and localize the head mounted display in the scene. Hololens like devices are globally consistent and performs full-fledge localization and mapping. However, we don't need to understand the scene in most of the cases.
 
-In such applications, understanding the scene is not critical. Localizing the camera in the world is enough to solve certain problems. In this project we focus on localizing the camera using a sequential set of images.
+There are applications where understanding the scene is not critical. Localizing the camera in the world is enough to solve certain problems. In this project we focus on localizing the camera using a sequential set of images.
 
 
 \section{Background}
-\textbf{SFM}: In structure from motion algorithms, the goal is to generate the scene structure and localize camera positions for each image. The images are in no particular order and can be taken after several timesteps.
+The localization and mapping has been of great interest to reserachers over past three decades. The computer vision community has called them as structure from motion and the robotics community has be tackling the same problem using simultaneous localization and mapping (SLAM).
 
-\textbf{Visual SLAM}: The focus in the visual SLAM techniques is both in reconstructing the scene and also localizing the camera in the scene. One distinction between SFM and SLAM is that the input images are sequential. This provides us with both challenges like short baselines and additional constraints on the system for faster optimization. Such system also aim to produce dense reconstructions.
+\textbf{SFM}: In structure from motion algorithms, the goal is to generate the scene structure and localize camera positions for each image. The images are in no particular order and can be taken after several timesteps. This is usually an offline process and takes hours to get output and this is not intended to operate real-time.
+
+\textbf{Visual SLAM}: The focus in the visual SLAM techniques is both in reconstructing the scene and also localizing the camera in the scene. One distinction between SFM and SLAM is that the input images are sequential. This provides us with both challenges like short baselines and additional constraints on the system for faster optimization. Such system also aim to produce dense reconstructions and operate real-time.
 
 \textbf{Visual Odometry}: The goal of visual odometry is to only localize the camera in sequential images. Any 3D reconstruction is only a side effect of the main problem of localization. Usually, only sparse feature matches are enough to solve this task adequately.
 
@@ -106,15 +108,26 @@ For this project, our main focus is on localizing the camera in 3D space. We foc
     \end{subfigure}
     \caption{(a) Overall system architecture. Boxes on the right are what we implemented in this project (b) Results from visual odometry on one of the datasets.}
 \end{figure}
-\section{Our approach}
-Our overall system consists of multiple algorithms as described in Figure \ref{fig:system}. We experimented and found the best parameters for each block in the system diagram. Our implementation uses Opencv\cite{opencv} for computer vision tasks and Ceres solver\cite{ceres-solver} for the non-linear optimization.
+
+\section{System}
+Our overall system consists of multiple algorithms as described in Figure \ref{fig:system}. We developed most of the algorithms from scratch and experimented and found the best parameters for each block in the system diagram. Our implementation uses Opencv\cite{opencv} for computer vision tasks and Ceres solver\cite{ceres-solver} for the non-linear optimization.
+
+\begin{itemize}
+\item We take a sequence of images and find good feature matches between two frames.
+\item Each frame is tested against few heuristics to decide if it is a keyframe or not.
+\item Once keyframes are obtained, then we reconstruct the scene using the key-frames.
+\item The poses of the intermediate frames (not the key-frames) are found using PnP algorithm.
+\item Bundle adjustment is then performed using data from last few frames.
+\end{itemize}
+
+We discuss each of the methods in details in the following sections.
 
 \subsection{Feature Extraction and Matching}
 We have experimented with KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames using optical flow. For AKAZE\cite{akaze} and ORB features, the correspondences are found using feature matching. Experimentally, we found that AKAZE was able to generate good matches and in greater number than the other two approaches for the KITTI datasets\cite{kitti}.
 
 To remove outliers from the matches, we used three tests. The first is the \textbf{ratio test} which ensures that the feature is discriminative enough. This is accomplished by calculating the ratio of the distances between the best match and the second best match for a feature. A discriminative feature would have a high ratio and thus be a good feature to keep.
 
-The second test is the \textbf{symmetry test} where we ensure that matches from image $\textbf{I}_i$ to $\textbf{I}_j$ also match in the reverse direction - that is from $\textbf{I}_j$ to $\textbf{I}_i$. The third test is the \textbf{epipolar test} where we discard matches that do not satisfy the epipolar geometry of the two frames used for 3D reconstruction. An example of feature matches is shown in Figure \ref{fig:matches}.
+The second test is the \textbf{symmetry test} where we ensure that matches from image $\textbf{I}_i$ to $\textbf{I}_j$ also match in the reverse direction - that is from $\textbf{I}_j$ to $\textbf{I}_i$. The third test is the \textbf{epipolar test} where we discard matches that do not satisfy the epipolar geometry of the two frames used for 3D reconstruction. Using these three criteria we get rid of the most of the outliers in feature matching. An example of feature matches is shown in Figure \ref{fig:matches}.
 
 \begin{figure}
     \centering
@@ -124,13 +137,17 @@ The second test is the \textbf{symmetry test} where we ensure that matches from 
 \end{figure}
 
 \subsection{Keyframing}
-3D reconstruction is expensive and thus we want to limit it to only a few frames. This is done using keyframing where only specific frames are picked for 3D reconstruction and other frames use the point cloud generated from these frames.
 
-Our first approach was to have every frame be a keyframe - this is expensive to compute since you need to evaluate the feature matches, triangulate points and also recover pose.
+\begin{figure}
+\centering
+\includegraphics[width=0.5\textwidth]{./system_viz}
+\caption{Vizualization of the keyframes and the intermediate frames. The keyframes are used for 3D reconstruction and the pose of the intermediate frames are found using Perpective-n-point algorithm}
+\label{fig:keyframing}
+\end{figure}
 
-Our second approach was to have every 5th frame be a keyframe. This approach worked very well for motion along a straight line but drifted significantly when the camera turned.
+3D reconstruction is expensive and thus we want to limit it to only a few frames. This is done using keyframing where only specific frames are picked for 3D reconstruction and other frames use the point cloud generated from these frames as shown in the figure \ref{fig:keyframing}.
 
-Our third approach and current approach is based on the number of feature matches between the current and previous keyframe. If the count is below a certain threshold (45\% in our case), then we trigger creating a new keyframe and the corresponding 3D reconstruction.
+Our first approach was to have every frame be a keyframe - this is expensive to compute since you need to evaluate the feature matches, triangulate points and also recover pose. Our second approach was to have every 5th frame be a keyframe. This approach worked very well for motion along a straight line but drifted significantly when the camera turned. Our third approach and current approach is based on the number of feature matches between the current and previous keyframe. If the count is below a certain threshold (45\% in our case), then we trigger creating a new keyframe and the corresponding 3D reconstruction.
 
 Another approach we considered was using a homography based test\cite{homography}. However, we found that the feature match count approach worked better for our dataset.
 
@@ -259,10 +276,10 @@ Finally, we hope to model the point cloud as probability densities or planes. Th
 \begin{comment}
 \begin{thebibliography}{15}
 
-\bibitem{Szeliski}
-Szeliski, Richard. \textit{Computer Vision: Algorithms and Applications}. 1st ed. London: Springer-Verlag, 2010. Print.
+\bibitem{vo}
+Nister
 
-\bibitem{middlebury} Temple dataset \url{http://vision.middlebury.edu/mview/data/}
+\bibitem{akaze}
 
       \bibitem{akaze} P. Alcantarilla, J. Nuevo and A. Bartoli, \textit{Fast Explicit Diffusion for Accelerated Features in Nonlinear Scale Spaces}, BMVC 2013
       \bibitem{threepoint} F. Fraundorfer, P. Tanskanen and M. Pollefeys \textit{A minimal case solution to the calibrated relative pose problem for the case of two known orientation angles}, ECCV 2010.
