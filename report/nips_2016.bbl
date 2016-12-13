@@ -1,0 +1,51 @@
+\begin{thebibliography}{1}
+
+\bibitem{vo}
+O.~Naroditsky D.~Nister and J.~Bergen.
+\newblock Visual odometry.
+\newblock {\em CVPR}, 2004.
+
+\bibitem{opencv}
+G.~Bradski.
+\newblock Opencv library.
+\newblock {\em Dr. Dobb's Journal of Software Tools}, 2000.
+
+\bibitem{ceres-solver}
+Sameer Agarwal, Keir Mierle, and Others.
+\newblock Ceres solver.
+\newblock \url{http://ceres-solver.org}, 2012.
+
+\bibitem{akaze}
+J.~Nuevo P.~Alcantarilla and A.~Bartoli.
+\newblock Fast explicit diffusion for accelerated features in nonlinear scale
+  spaces.
+\newblock {\em BMVC}, 2013.
+
+\bibitem{kitti}
+Andreas Geiger, Philip Lenz, and Raquel Urtasun.
+\newblock Are we ready for autonomous driving? the kitti vision benchmark
+  suite.
+\newblock In {\em Conference on Computer Vision and Pattern Recognition
+  (CVPR)}, 2012.
+
+\bibitem{homography}
+O.~D.Faugeras and F.~Lustman.
+\newblock Motion and structure from motion in a piecewise planar environment.
+\newblock {\em IJPRAI}, 1988.
+
+\bibitem{Hartley2004}
+R.~I. Hartley and A.~Zisserman.
+\newblock {\em Multiple View Geometry in Computer Vision}.
+\newblock Cambridge University Press, ISBN: 0521540518, second edition, 2004.
+
+\bibitem{rigid}
+Olga Sorkine-Hornung and Michael Rabinovich.
+\newblock Least-squares rigid motion using svd.
+\newblock 2016.
+
+\bibitem{middlebury}
+Unknown.
+\newblock Temple dataset.
+\newblock \url{http://vision.middlebury.edu/mview/data/}, 2004.
+
+\end{thebibliography}
