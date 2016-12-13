@@ -110,14 +110,14 @@ For this project, our main focus is on localizing the camera in 3D space. We foc
 \end{figure}
 
 \section{System}
-Our overall system consists of multiple algorithms as described in Figure \ref{fig:system}. We developed most of the algorithms from scratch and experimented and found the best parameters for each block in the system diagram. Our implementation uses Opencv\cite{opencv} for computer vision tasks and Ceres solver\cite{ceres-solver} for the non-linear optimization.
+Our overall system consists of multiple algorithms as described in Figure \ref{fig:system}. We developed most of the algorithms from scratch and experimented and found the best parameters for each block in the system diagram. Our implementation uses OpenCV\cite{opencv} for computer vision tasks and Ceres solver\cite{ceres-solver} for the non-linear optimization.
 
 \begin{itemize}
 \item We take a sequence of images and find good feature matches between two frames.
 \item Each frame is tested against few heuristics to decide if it is a keyframe or not.
 \item Once keyframes are obtained, then we reconstruct the scene using the key-frames.
 \item The poses of the intermediate frames (not the key-frames) are found using PnP algorithm.
-\item Bundle adjustment is then performed using data from last few frames.
+\item Bundle adjustment is then performed using data from last m frames.
 \end{itemize}
 
 We discuss each of the methods in details in the following sections.
@@ -125,7 +125,7 @@ We discuss each of the methods in details in the following sections.
 \subsection{Feature Extraction and Matching}
 We have experimented with KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames using optical flow. For AKAZE\cite{akaze} and ORB features, the correspondences are found using feature matching. Experimentally, we found that AKAZE was able to generate good matches and in greater number than the other two approaches for the KITTI datasets\cite{kitti}.
 
-To remove outliers from the matches, we used three tests. The first is the \textbf{ratio test} which ensures that the feature is discriminative enough. This is accomplished by calculating the ratio of the distances between the best match and the second best match for a feature. A discriminative feature would have a high ratio and thus be a good feature to keep.
+To remove outliers from the matches, we use three tests. The first is the \textbf{ratio test} which ensures that the feature is discriminative enough. This is accomplished by calculating the ratio of the distances between the best match and the second best match for a feature. A discriminative feature would have a high ratio and thus be a good feature to keep.
 
 The second test is the \textbf{symmetry test} where we ensure that matches from image $\textbf{I}_i$ to $\textbf{I}_j$ also match in the reverse direction - that is from $\textbf{I}_j$ to $\textbf{I}_i$. The third test is the \textbf{epipolar test} where we discard matches that do not satisfy the epipolar geometry of the two frames used for 3D reconstruction. Using these three criteria we get rid of the most of the outliers in feature matching. An example of feature matches is shown in Figure \ref{fig:matches}.
 
@@ -178,11 +178,24 @@ As an image sequence proceeds, we use the current keyframe and the previous keyf
 
 One approach to calculate the scale of the point cloud is to fit gaussian to the scaling factors obtained by pairwise distances between 3D points in two point clouds. Using the mean of the distances in the local pointcloud and the global pointcloud, we can calculate the scale. Once we have the scale, we can compute the rotation and translation of the point cloud using the common feature points.
 
-To compute the rotation and translation, we use the method described in \citep{rigidbody}
+To compute the rotation and translation, we use the method described in \citep{rigid}
 
 \begin{align*}
-    (R, t) = argmin_{R, t} \Sigma_{i=1}^n || (R \mathbf{p_i} + t ) - \mathbf{q_i}||^2 
+    (\textbf{R}, \textbf{t}) &= \min_{\textbf{R} \in SO(3), \textbf{t} \in \mathbb{R}^{3}} \sum_i || \textbf{Rp}_i + t - \textbf{q}_i||^{2}_{2}\\
+    \tilde{\textbf{p}} &= \frac{1}{n} \sum_i^{n} \textbf{p}_i\\
+    \tilde{\textbf{q}} &= \frac{1}{n} \sum_i^{n} \textbf{q}_i\\
+    \textbf{x}_i &= \textbf{p}_i - \tilde{\textbf{p}_i}\\
+    \textbf{y}_i &= \textbf{q}_i - \tilde{\textbf{q}_i}\\
+    \textbf{S} &= \textbf{XWY}^{T} = \textbf{U}\Sigma\textbf{V}^{T} & \text{(SVD)}\\
+    \textbf{R} &= \textbf{V} \begin{bmatrix}
+        1 & \cdots & \cdots\\
+        \cdots & 1 & \cdots\\
+        \cdots & \cdots & \det(\textbf{VU}^{T})\\
+    \end{bmatrix} \textbf{U}^{T}\\
+    \textbf{t} &= \tilde{\textbf{q}} - \textbf{R}\tilde{\textbf{p}}\\
 \end{align*}
+
+Here, \textbf{X} is a $3\times n$ matrix with $\textbf{x}_i$ as columns. Similarly, \textbf{Y}. Similarly, \textbf{W} is the weighting matrix - which is identity in our case.
 
 Another approach is to ensure that all projection matrices and transformations occur in one global frame of reference. We assume the first keyframe to be at the origin and chain transformations together to get the current pose.
 
