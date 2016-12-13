@@ -181,7 +181,7 @@ One approach to calculate the scale of the point cloud is to fit gaussian to the
 To compute the rotation and translation, we use the method described in \citep{rigid}
 
 \begin{align*}
-    (\textbf{R}, \textbf{t}) &= \min_{\textbf{R} \in SO(3), \textbf{t} \in \mathbb{R}^{3}} \sum_i || \textbf{Rp}_i + t - \textbf{q}_i||^{2}_{2}\\
+    (\textbf{R}, \textbf{t}) &= \min_{\textbf{R} \in SO(3), \textbf{t} \in \mathbb{R}^{3}} \sum_i || \textbf{Rp}_i + \textbf{t} - \textbf{q}_i||^{2}_{2}\\
     \tilde{\textbf{p}} &= \frac{1}{n} \sum_i^{n} \textbf{p}_i\\
     \tilde{\textbf{q}} &= \frac{1}{n} \sum_i^{n} \textbf{q}_i\\
     \textbf{x}_i &= \textbf{p}_i - \tilde{\textbf{p}_i}\\
@@ -195,7 +195,7 @@ To compute the rotation and translation, we use the method described in \citep{r
     \textbf{t} &= \tilde{\textbf{q}} - \textbf{R}\tilde{\textbf{p}}\\
 \end{align*}
 
-Here, \textbf{X} is a $3\times n$ matrix with $\textbf{x}_i$ as columns. Similarly, \textbf{Y}. Similarly, \textbf{W} is the weighting matrix - which is identity in our case.
+Here, \textbf{X} is a $3\times n$ matrix with $\textbf{x}_i$ as columns. \textbf{Y} is defined similarly. \textbf{W} is the weighting matrix - which is identity in our case.
 
 Another approach is to ensure that all projection matrices and transformations occur in one global frame of reference. We assume the first keyframe to be at the origin and chain transformations together to get the current pose.
 
