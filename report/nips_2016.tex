@@ -163,7 +163,7 @@ As an image sequence proceeds, we use the current keyframe and the previous keyf
 
 One approach to calculate the scale of the point cloud is to fit gaussian on the pairwise distances between 3D points. Using the mean of the distances in the local pointcloud and the global pointcloud, we can calculate the scale. Once we have the scale, we can compute the rotation and translation of the point cloud using the common feature points.
 
-To compute the rotation and translation, something here.
+To compute the rotation and translation, we follow the approach in \cite{rigid}.
 
 \begin{align*}
     equation &= something
