@@ -25,7 +25,7 @@
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
-\title{Visual Odometry}
+\title{Stereo and Monocular Visual Odometry}
 
 % The \author macro works with any number of authors. There are two
 % commands used to separate the names and addresses of multiple
@@ -89,7 +89,7 @@ In such applications, understanding the scene is not critical. Localizing the ca
 
 \textbf{Visual Odometry}: The goal of visual odometry is to only localize the camera in sequential images. Any 3D reconstruction is only a side effect of the main problem of localization. Usually, only sparse feature matches are enough to solve this task adequately.
 
-For this project, our main focus is on localizing the camera in 3D space. We focus only to be locally consistent. So our system's camera position might drift over time - however, we are only interested in accurate localization in a short timespan on the order of a few seconds. We do not explore ideas like loop closure in this project.
+For this project, our main focus is on localizing the camera in 3D space. We focus only to be locally consistent. So our system's camera position might drift over time - however, we are only interested in accurate localization in a short timespan on the order of a few seconds. We do not explore ideas like loop closure in this project. Our work is inspired by the work of Nister et al \cite{vo}.
 
 
 \begin{figure}
@@ -107,7 +107,7 @@ For this project, our main focus is on localizing the camera in 3D space. We foc
     \caption{(a) Overall system architecture. Boxes on the right are what we implemented in this project (b) Results from visual odometry on one of the datasets.}
 \end{figure}
 \section{Our approach}
-Our overall system consists of multiple algorithms as described in Figure \ref{fig:system}.
+Our overall system consists of multiple algorithms as described in Figure \ref{fig:system}. We experimented and found the best parameters for each block in the system diagram. Our implementation uses Opencv\cite{opencv} for computer vision tasks and Ceres solver\cite{ceres-solver} for the non-linear optimization.
 
 \subsection{Feature Extraction and Matching}
 We have experimented with KLT features, AKAZE features and ORB features. The KLT features can also be used for tracking the features in the subsequent frames using optical flow. For AKAZE\cite{akaze} and ORB features, the correspondences are found using feature matching. Experimentally, we found that AKAZE was able to generate good matches and in greater number than the other two approaches for the KITTI datasets\cite{kitti}.
@@ -132,6 +132,8 @@ Our second approach was to have every 5th frame be a keyframe. This approach wor
 
 Our third approach and current approach is based on the number of feature matches between the current and previous keyframe. If the count is below a certain threshold (45\% in our case), then we trigger creating a new keyframe and the corresponding 3D reconstruction.
 
+Another approach we considered was using a homography based test\cite{homography}. However, we found that the feature match count approach worked better for our dataset.
+
 \subsection{Three dimensional reconstruction}
 Using the feature matching, we can triagulate the points. The fundamental matrix gives the relationship between the feature points. We use a RANSAC based 8-point algorithm to find the fundamental matrix.
 
@@ -140,6 +142,21 @@ Using this fundamental matrix, we can estimate the camera pose between the two i
 We use 3D reconstruction in two modes: one with stereo image pairs and one with a monocular images. Reconstruction in both modes was successful. However, as hypothesized, we noticed qualititively that the monocular 3D reconstruction had more drift compared to the stereo reconstruction.
 
 We run 3D reconstruction only on keyframes. A new keyframe is created everytime the number of matches to the previous keyframe goes below a certain threshold. Currently, we use a threshold of 45\%. This results in a stable reconstruction and allows for registering the different pointclouds together as well.
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{.45\linewidth}
+        \includegraphics[width=\linewidth]{./pnp.jpg}
+        \caption{}
+        \label{fig:pnp}
+    \end{subfigure}
+    \begin{subfigure}[b]{.45\linewidth}
+        \includegraphics[width=\linewidth]{./vo_stereo_7.png}
+        \caption{}
+        \label{fig:recon}
+    \end{subfigure}
+    \caption{(a) Using PNP to estimate the camera pose using the global 3D point cloud and the corresponding observations in the image. (b) Three dimensional reconstruction (points in green) and the camera poses corresponding to them}
+\end{figure}
 
 \subsection{Point cloud registration}
 As an image sequence proceeds, we use the current keyframe and the previous keyframe (or the current keyframe and the corresponding right-eye image in case of stereo) to reconstruct a point cloud based on feature matches. However, the point clouds might be of a different scale and would need to be registered to a global coordinate system.
@@ -155,9 +172,13 @@ To compute the rotation and translation, something here.
 Another approach is to ensure that all projection matrices and transformations occur in one global frame of reference. We assume the first keyframe to be at the origin and chain transformations together to get the current pose.
 
 \subsection{Camera pose recovery}
-Once the scene is reconstructed using the keyframes, the camera pose for normal frames can be recovered using Perspective-n-point (PnP) algorithms. By knowing the 3D points from the reconstruction, and its corresponding feature location in any image the camera pose can be recovered using PnP.
+Once the scene is reconstructed using the keyframes, the camera pose for normal frames can be recovered using Perspective-n-point (PnP) algorithms. By knowing the 3D points from the reconstruction, and its corresponding feature location in any image the camera pose can be recovered using PnP, as shown in Figure \ref{fig:pnp}.
 
 We chain these camera poses together to produce an initial guess of the camera trajectory. The trajectory from such chaining drifts as the sequence proceeds and errors accumulate. To account for these errors in the camera projection matrix (and also the point cloud reconstruction), we use bundle adjustment over the past m frames.
+
+\begin{align*}
+    something &= everything
+\end{align*}
 
 \subsection{Bundle Adjustment}
 In visual odometry, the current camera pose is obtained by adding the last observed motion to the current detection change. This leads to a superlinear increase in pose error over time. In this section, we look at the techniques we intend to use to correct this pose drift.
@@ -170,7 +191,7 @@ We use a local bundle adjustment that affects the global point cloud and the rec
     &\min_{\textbf{M}_i, \textbf{X}_j} \sum_i \sum_j || \textbf{x}^{i}_{j} - \textbf{M}^{i} \textbf{X}_j||^{2}_{2}
 \end{align*}
 
-After accounting for visibility of keypoints, our optimization has about fifteen thousand variables. We use the dense schur method for optimization and use Ceres solver\cite{ceres-solver}. The optimization is able to reduce reprojection error across multiple frames as shown in Figure \ref{fig:reproj}.
+After accounting for visibility of keypoints, our optimization has about fifteen thousand variables. This number depends on the type of image features used (ORB, AKAZE, etc). We use the dense schur method for optimization and use Ceres solver\cite{ceres-solver}. The optimization is able to reduce reprojection error across multiple frames as shown in Figure \ref{fig:reproj}.
 
 \begin{figure}
     \centering
@@ -198,7 +219,7 @@ We used this experiment as a baseline to test how good the monocular visual odom
 
 \begin{figure}[h]
     \centering
-    \begin{subfigure}[b]{.45\textwidth}
+    \begin{subfigure}[b]{.30\textwidth}
         \includegraphics[width=\linewidth]{./vo_stereo_2.png}
         \caption{}
     \end{subfigure}
@@ -206,7 +227,11 @@ We used this experiment as a baseline to test how good the monocular visual odom
         \includegraphics[width=\linewidth]{./vo_mono_3.png}
         \caption{}
     \end{subfigure}
-    \caption{(a) Visual odometry using stereo based reconstruction (b) Using only monocular image pairs}
+    \begin{subfigure}[b]{.30\textwidth}
+        \includegraphics[width=\linewidth]{./mono-ba.png}
+        \caption{}
+    \end{subfigure}
+    \caption{(a) Visual odometry using stereo based reconstruction (b) Using only monocular image pairs (c) Using monocular image pairs and bundle adjustment.}
 \end{figure}
 
 \subsection{Monocular visual odometry}
