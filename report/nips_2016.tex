@@ -101,7 +101,7 @@ For this project, our main focus is on localizing the camera in 3D space. We foc
         \caption{}
         \label{fig:system}
     \end{subfigure}
-    \begin{subfigure}[b]{.30\linewidth}
+    \begin{subfigure}[b]{.29\linewidth}
         \includegraphics[width=\linewidth]{./vo_stereo_5.png}
         \caption{}
         \label{fig:firstresult}
@@ -222,12 +222,14 @@ An illustration of the camera pose recovery is shown in the figure \ref{fig:came
 \begin{figure}
     \centering
     \begin{subfigure}[b]{.45\linewidth}
+        \centering
         \includegraphics[width=\linewidth]{./camera-pose.png}
         \caption{}
         \label{fig:camerapose}
     \end{subfigure}
     \begin{subfigure}[b]{.45\linewidth}
-        \includegraphics[width=\linewidth]{./bundle-adjustment.png}
+        \centering
+        \includegraphics[width=.7\linewidth]{./bundle-adjustment.png}
         \caption{}
         \label{fig:ba}
     \end{subfigure}
@@ -290,14 +292,17 @@ We used this experiment as a baseline to test how good the monocular visual odom
     \begin{subfigure}[b]{.30\textwidth}
         \includegraphics[width=\linewidth]{./vo_stereo_2.png}
         \caption{}
+        \label{fig:stereo}
     \end{subfigure}
     \begin{subfigure}[b]{.30\textwidth}
         \includegraphics[width=\linewidth]{./vo_mono_3.png}
         \caption{}
+        \label{fig:mono}
     \end{subfigure}
     \begin{subfigure}[b]{.30\textwidth}
         \includegraphics[width=\linewidth]{./mono-ba.png}
         \caption{}
+        \label{fig:monoba}
     \end{subfigure}
     \caption{(a) Visual odometry using stereo based reconstruction (b) Using only monocular image pairs (c) Using monocular image pairs and bundle adjustment.}
 \end{figure}
@@ -306,20 +311,25 @@ We used this experiment as a baseline to test how good the monocular visual odom
 With the monocular case, we used the previous keyframe's image instead of the right eye of the stereo pair. Doing this required writing special code to get the system initialized (the first keyframe would have no 3D reconstruction associated with it). However, once initialized, the system works well and produces the familar trajectory.
 
 \subsection{Monocular visual odometry with bundle adjustment}
-To improve results for the monocular visual odometry, we enabled bundle adjustment and executed it on the same datasets as in previous experiments. We found that the results were better qualitatively and produce a good trajectory of the camera.
+To improve results for the monocular visual odometry, we enabled bundle adjustment and executed it on the same datasets as in previous experiments. We found that the results were better qualitatively and produce a good trajectory of the camera as seen in Figure \ref{fig:monoba}.
 
 However, the code execution speed slowed down quite a bit. We found that an optimization over the past 10 frames requires about fifteen thousand variables and takes several milliseconds to execute. We currently optimize over the extrinsic matrix and assume that the intrinsics are known and correct. Our hypothesis is that optimizing over the SE(3) manifold would help converge the optimization in fewer iterations and potentially to a better solution as well. This is because it would enforce the rotation matrix to be orthonormal.
 
 
 \section{Future Work}
 
-Currently, we calculate the fundamental matrix using the Ransac version of the 8-point algorithm. However, it is possible to improve upon this by using the three-point algorithm. This requires integration with the IMU as an additional clue for estimating the fundamental matrix.
+Currently, we calculate the fundamental matrix using the Ransac version of the 5-point algorithm. However, it is possible to improve upon this by using the three-point algorithm\cite{threepoint}. This requires integration with the IMU as an additional clue for estimating the fundamental matrix.
 
 Another area to improve is selecting when to generate a new keyframe. We use the number of keyframe feature matches as the selection criteria. A more mathematically grounded technique would be to use the covariance of the various points to do this.
 
 Our data structures used for storing point correspondences, the 3D point cloud, etc can be made much more memory and complexity efficient. While this wouldn't contribute to computer vision, it would allow us to run experiments faster and better tune the algorithm to be more generic.
 
 Finally, we hope to model the point cloud as probability densities or planes. This would reduce the memory footprint and potentially improve the quality of pose estimation.
+
+\section{Conclusion}
+We implemented an end-to-end pipeline for visual odometry and included key concepts like keyframing, monocular 3D reconstruction, point cloud registration, camera pose recovery and bundle adjustment. We experimented with multiple configurations - stereo, monocular and monocular plus bundle adjustment.
+
+Our system can take a dataset as an input and produce a motion trajectory of the camera. We hope to use this system in the future, improve upon it and use it as a starting point for future research.
 
 \bibliographystyle{unsrt}
 \bibliography{nips_2016}
