@@ -330,7 +330,7 @@ We used this experiment as a baseline to test how good the monocular visual odom
 With the monocular case, we used the previous keyframe's image instead of the right image of the stereo pair. Doing this required writing special code to get the system initialized (the first keyframe would have no 3D reconstruction associated with it). However, once initialized, the system works well and produces the familar trajectory.
 
 \subsection{Monocular visual odometry with bundle adjustment}
-To improve results for the monocular visual odometry, we enabled bundle adjustment and executed it on the same datasets as in previous experiments. We found that the results were better qualitatively and produce a good trajectory of the camera as seen in Figure \ref{fig:monoba}.
+To improve results for the monocular visual odometry, we enabled bundle adjustment and executed it on the same datasets as in previous experiments. We found that the results were better qualitatively and produce a good trajectory of the camera as seen in Figure \ref{fig:monoba}. Comparing the bundle-adjustment results with purely monocular results, we can see that bundle-adjusted method maintains the orthogonality of the lines.
 
 However, the code execution speed slowed down quite a bit. We found that an optimization over the past 10 frames requires about fifteen thousand variables and takes several milliseconds to execute. We currently optimize over the extrinsic matrix and assume that the intrinsics are known and correct. Our hypothesis is that optimizing over the SE(3) manifold would help converge the optimization in fewer iterations and potentially to a better solution as well. This is because it would enforce the rotation matrix to be orthonormal.
 
