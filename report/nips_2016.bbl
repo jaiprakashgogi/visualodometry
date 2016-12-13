@@ -1,4 +1,4 @@
-\begin{thebibliography}{1}
+\begin{thebibliography}{10}
 
 \bibitem{vo}
 O.~Naroditsky D.~Nister and J.~Bergen.
@@ -47,5 +47,11 @@ Olga Sorkine-Hornung and Michael Rabinovich.
 Unknown.
 \newblock Temple dataset.
 \newblock \url{http://vision.middlebury.edu/mview/data/}, 2004.
+
+\bibitem{threepoint}
+P.~Tanskanen F.~Fraundorfer and M.~Pollefeys.
+\newblock A minimal case solution to the calibrated relative pose problem for
+  the case of two known orientation angles.
+\newblock {\em ECCV}, 2010.
 
 \end{thebibliography}
