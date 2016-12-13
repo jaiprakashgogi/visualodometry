@@ -206,31 +206,48 @@ We chain these camera poses together to produce an initial guess of the camera t
 
 The rotation and the translation obtained from the PnP algorithm in OpenCV gives the tranformation of the camera with respect to the camera frame of reference. To obtain the motion of the camera with respect to global frame of reference, we can just do the inverse.
 
-$$ T_{camera}  = \begin{bmatrix}
-R_{3\times3} & t \\
-0_{3\times3} & 1
+$$ \textbf{T}_{camera}  = \begin{bmatrix}
+\textbf{R}_{3\times3} & \textbf{t} \\
+\textbf{0}_{1\times3} & 1
 \end{bmatrix} $$
 
-$$ T_{world}  = \begin{bmatrix}
-R^T  & -R^T t\\
-0_{3\times3} & 1
+$$ \textbf{T}_{world}  = \begin{bmatrix}
+\textbf{R}^T  & -\textbf{R}^T \textbf{t}\\
+\textbf{0}_{1\times3} & 1
 \end{bmatrix} $$
 
 
 An illustration of the camera pose recovery is shown in the figure \ref{fig:camerapose}. The green point shows the reconstruction using the keyframe and the intermedite camera pose is obtained using PnP.
 
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{.45\linewidth}
+        \includegraphics[width=\linewidth]{./camera-pose.png}
+        \caption{}
+        \label{fig:camerapose}
+    \end{subfigure}
+    \begin{subfigure}[b]{.45\linewidth}
+        \includegraphics[width=\linewidth]{./bundle-adjustment.png}
+        \caption{}
+        \label{fig:ba}
+    \end{subfigure}
+    \caption{(a) Recovering camera pose from the point cloud (b) Visualizing bundle adjustment}
+\end{figure}
+
 \subsection{Bundle Adjustment}
-In visual odometry, the current camera pose is obtained by adding the last observed motion to the current detection change. This leads to a superlinear increase in pose error over time. In this section, we look at the techniques we intend to use to correct this pose drift.
+In visual odometry, the current camera pose is obtained by adding the last observed motion to the current detection change. This leads to a superlinear increase in pose error over time. In this section, we look at the techniques we use to correct this pose drift.
 
-One solution is to use bundle adjustment to impose geometrical constraints over multiple frames. The computational cost increases with the cube of the number of frames used for computation. Thus, we limit the number of frames to a small window from the previously captured frames. This approach is called local bundle adjustment.
+Bundle adjustment can be used to impose geometrical constraints over multiple frames as shown in Figure \ref{fig:ba}. The computational cost increases with the cube of the number of frames used for computation. Thus, we limit the number of frames to a small window from the previously captured frames. This approach is called local bundle adjustment.
 
-We use a local bundle adjustment that affects the global point cloud and the recent m camera poses. We track visibility of 3D points in each frame and use that to construct a cost function.
+We use a local bundle adjustment that affects the global point cloud and the recent m camera poses. We track visibility of 3D points in each frame and use that to construct a cost function. 
 
 \begin{align*}
-    &\min_{\textbf{M}_i, \textbf{X}_j} \sum_i \sum_j || \textbf{x}^{i}_{j} - \textbf{M}^{i} \textbf{X}_j||^{2}_{2}
+    &\min_{\textbf{M}_i, \textbf{X}_j} \sum_{i=0}^{m} \sum_j || \textbf{x}^{i}_{j} - \textbf{M}^{i} \textbf{X}_j||^{2}_{2}
 \end{align*}
 
-After accounting for visibility of keypoints, our optimization has about fifteen thousand variables. This number depends on the type of image features used (ORB, AKAZE, etc). We use the dense schur method for optimization and use Ceres solver\cite{ceres-solver}. The optimization is able to reduce reprojection error across multiple frames as shown in Figure \ref{fig:reproj}.
+For the camera projection matrices $\textbf{M}^{i}$, we assume that the intrinsics are known and constant. We optimize over the space of all $3 \times 4$ matrices and it converges in about 100 iterations.
+
+After accounting for visibility of keypoints, our optimization has about fifteen thousand variables for $m = 10$. This number depends on the type of image features used (ORB, AKAZE, etc). We use the dense schur method for optimization and use Ceres solver\cite{ceres-solver}. The optimization is able to reduce reprojection error across multiple frames as shown in Figure \ref{fig:reproj}.
 
 \begin{figure}
     \centering
