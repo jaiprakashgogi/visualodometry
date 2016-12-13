@@ -72,7 +72,7 @@
 \maketitle
 
 \begin{abstract}
-In this project, we localize the camera using visual odometry. The major component of the project is to generate keyframes according to pre-defined heuristics and triangulate the points to create 3D reconstruction of the scene. The poses of the intermediate frames can be found using Perspective-n-point algorithm. In addition, we also perform local bundle adjustment over last few frames so that the localization is locally consistent. The stereo mononocular performs the best and is close to the ground-truth when compared to the monocular visual odometry. 
+In this project, we localize the camera using visual odometry. The major component of the project is to generate keyframes according to pre-defined heuristics and triangulate the points to create 3D reconstruction of the scene. The poses of the intermediate frames can be found using Perspective-n-point algorithm. In addition, we also perform local bundle adjustment over last few frames so that the localization is locally consistent. The stereo visual odometry performs the best and is close to the ground-truth when compared to the monocular visual odometry. 
 \end{abstract}
 
 \section{Introduction}
@@ -83,11 +83,11 @@ There are applications where understanding the scene is not critical. Localizing
 
 
 \section{Background}
-The localization and mapping has been of great interest to reserachers over past three decades. The computer vision community has called them as structure from motion and the robotics community has be tackling the same problem using simultaneous localization and mapping (SLAM).
+The localization and mapping has been of great interest to reserachers over past three decades. The computer vision community has referred it as structure from motion and the robotics community has be tackling a similar problem known as simultaneous localization and mapping (SLAM).
 
-\textbf{SFM}: In structure from motion algorithms, the goal is to generate the scene structure and localize camera positions for each image. The images are in no particular order and can be taken after several timesteps. This is usually an offline process and takes hours to get output and this is not intended to operate in real-time.
+\textbf{SFM}: In structure from motion algorithms, the goal is to generate the scene structure and localize camera positions for each image. The images are in no particular order and can be taken at different times. This is usually an offline process and takes hours to get output and this is not intended to operate in real-time.
 
-\textbf{Visual SLAM}: The focus in the visual SLAM techniques is both in reconstructing the scene and also localizing the camera in the scene. One distinction between SFM and SLAM is that the input images are sequential. This provides us with both challenges like short baselines and additional constraints on the system for faster optimization. Such system also aim to produce dense reconstructions and operate real-time.
+\textbf{Visual SLAM}: The focus in the visual SLAM techniques is both in reconstructing the scene and also localizing the camera in the scene. One distinction between SFM and SLAM is that the input images are sequential. This provides us with both challenges like short baselines and additional constraints on the system for faster optimization. Such systems also aim to produce dense reconstructions and operate real-time.
 
 \textbf{Visual Odometry}: The goal of visual odometry is to only localize the camera in sequential images. Any 3D reconstruction is only a side effect of the main problem of localization. Usually, only sparse feature matches are enough to solve this task adequately.
 
@@ -152,11 +152,11 @@ Our first approach was to have every frame be a keyframe - this is expensive to 
 Another approach we considered was using a homography based test\cite{homography}. However, we found that the feature match count approach worked better for our dataset.
 
 \subsection{3D scene reconstruction}
-Using the feature matching, we can find the fundamental matrix. The fundamental matrix gives the relationship between the feature points. We use a RANSAC based 5-point algorithm to find the fundamental matrix.
+Using the feature matching, we can find the fundamental matrix. The fundamental matrix gives the relationship between the feature points in accordance to epi-polar geometry. We use a RANSAC based 5-point algorithm to find the fundamental matrix.
 
 Using this fundamental matrix, we can estimate the camera pose between the two images. However, this gives rise to four possible camera configurations (with $W$/$W^T$ and $\pm t$) as described in \cite{Hartley2004}. The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
 
-The triangulation can be done in two modes: one with stereo image pairs and one with a monocular images. Once a frame is labelled as a keyframe, we generate the reconstruction of the scene either by using the stereo pair or reconstruction using the previous keyframe in monocular case. Reconstruction in both modes was successful. However, as hypothesized, we noticed qualititively that the monocular 3D reconstruction had more drift compared to the stereo reconstruction.
+The triangulation can be done in two modes: one with stereo image pairs and one with a monocular images from keyframes. Once a frame is labelled as a keyframe, we generate the reconstruction of the scene either by using the stereo pair or reconstruction using the previous keyframe in monocular case. Reconstruction in both modes was successful. However, as hypothesized, we noticed qualititively that the monocular 3D reconstruction had more drift compared to the stereo reconstruction. The reconstruction in monocular and stereo are shown in the figure \ref{fig:reconstruction}.
 
 \begin{figure}
     \centering
@@ -170,7 +170,7 @@ The triangulation can be done in two modes: one with stereo image pairs and one 
         \caption{}
         \label{fig:recon}
     \end{subfigure}
-    \caption{(a) Using PNP to estimate the camera pose using the global 3D point cloud and the corresponding observations in the image. (b) Three dimensional reconstruction (points in green) and the camera poses corresponding to them}
+    \caption{(a) Using PnP to estimate the camera pose using the global 3D point cloud and the corresponding observations in the image. (b) Three dimensional reconstruction (points in green) and the camera poses corresponding to them. Red frame is keyframe camera frustrum and the yellow is the intermediate frame camera frustrum}
 \end{figure}
 
 \subsection{Point cloud registration}
@@ -186,7 +186,7 @@ To compute the rotation and translation, we use the method described in \citep{r
     \tilde{\textbf{q}} &= \frac{1}{n} \sum_i^{n} \textbf{q}_i\\
     \textbf{x}_i &= \textbf{p}_i - \tilde{\textbf{p}_i}\\
     \textbf{y}_i &= \textbf{q}_i - \tilde{\textbf{q}_i}\\
-    \textbf{S} &= \textbf{XWY}^{T} = \textbf{U}\Sigma\textbf{V}^{T} & \text{(SVD)}\\
+    \textbf{S} &= \textbf{XY}^{T} = \textbf{U}\Sigma\textbf{V}^{T} & \text{(SVD)}\\
     \textbf{R} &= \textbf{V} \begin{bmatrix}
         1 & \cdots & \cdots\\
         \cdots & 1 & \cdots\\
@@ -195,7 +195,7 @@ To compute the rotation and translation, we use the method described in \citep{r
     \textbf{t} &= \tilde{\textbf{q}} - \textbf{R}\tilde{\textbf{p}}\\
 \end{align*}
 
-Here, \textbf{X} is a $3\times n$ matrix with $\textbf{x}_i$ as columns. \textbf{Y} is defined similarly. \textbf{W} is the weighting matrix - which is identity in our case.
+Here, \textbf{X} is a $3\times n$ matrix with $\textbf{x}_i$ as columns. \textbf{Y} is defined similarly.
 
 Another approach is to ensure that all projection matrices and transformations occur in one global frame of reference. We assume the first keyframe to be at the origin and chain transformations together to get the current pose.
 
@@ -266,7 +266,7 @@ After accounting for visibility of keypoints, our optimization has about fifteen
 \end{figure}
 
 \section{Results}
-After implementing the above algorithms we were able to get a good localization of the camera on the KITTI datasets \citep{kitti}. The methods are eveluated against the ground truth qualitatively. The results are shown for the stereo, monocular and monocular with bundle-adjustment.
+After implementing the above algorithms we were able to get a good localization of the camera on the KITTI datasets \citep{kitti}. The methods are evaluated against the ground truth qualitatively. The results are shown for the stereo, monocular and monocular with bundle-adjustment.
 
 \subsection{Stereo visual odometry}
 In stereoscopic visual odometry, we used a stereo pair at every keyframe. The baseline between the stereo pair was about \textbf{0.54m} and this helped produce very accurate visual odometry. The reconstruction using the stereo pair is shown in the figure \ref{fig:reconstruction}. The stereo reconstruction is better than the monocular reconstruction.
@@ -327,7 +327,7 @@ We used this experiment as a baseline to test how good the monocular visual odom
 \end{figure}
 
 \subsection{Monocular visual odometry}
-With the monocular case, we used the previous keyframe's image instead of the right eye of the stereo pair. Doing this required writing special code to get the system initialized (the first keyframe would have no 3D reconstruction associated with it). However, once initialized, the system works well and produces the familar trajectory.
+With the monocular case, we used the previous keyframe's image instead of the right image of the stereo pair. Doing this required writing special code to get the system initialized (the first keyframe would have no 3D reconstruction associated with it). However, once initialized, the system works well and produces the familar trajectory.
 
 \subsection{Monocular visual odometry with bundle adjustment}
 To improve results for the monocular visual odometry, we enabled bundle adjustment and executed it on the same datasets as in previous experiments. We found that the results were better qualitatively and produce a good trajectory of the camera as seen in Figure \ref{fig:monoba}.
@@ -349,6 +349,11 @@ Finally, we hope to model the point cloud as probability densities or planes. Th
 We implemented an end-to-end pipeline for visual odometry and included key concepts like keyframing, monocular 3D reconstruction, point cloud registration, camera pose recovery and bundle adjustment. We experimented with multiple configurations - stereo, monocular and monocular plus bundle adjustment.
 
 Our system can take a dataset as an input and produce a motion trajectory of the camera. We hope to use this system in the future, improve upon it and use it as a starting point for future research.
+
+\subsection{Resources}
+\textbf{Github: } \url{https://github.com/jaiprakashgogi/visualodometry}\\
+\textbf{Result videos: } \url{https://goo.gl/QFQKhQ}
+
 
 \bibliographystyle{unsrt}
 \bibliography{nips_2016}
