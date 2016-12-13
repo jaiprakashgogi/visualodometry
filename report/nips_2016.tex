@@ -289,22 +289,41 @@ We used this experiment as a baseline to test how good the monocular visual odom
 
 \begin{figure}[h]
     \centering
-    \begin{subfigure}[b]{.30\textwidth}
-        \includegraphics[width=\linewidth]{./vo_stereo_2.png}
+    \begin{subfigure}[b]{.45\textwidth}
+    \centering
+        \includegraphics[width=\linewidth]{./avisingh}
         \caption{}
-        \label{fig:stereo}
     \end{subfigure}
-    \begin{subfigure}[b]{.30\textwidth}
-        \includegraphics[width=\linewidth]{./vo_mono_3.png}
+    \begin{subfigure}[b]{.45\textwidth}
+    \centering
+        \includegraphics[width=\linewidth]{./vo_stereo_5}
+        \caption{}
+    \end{subfigure}
+    \caption{Evaluation of our stereo visual odometry against ground truth. (a) The ground-truth trajectory with a baseline implementation. (b) Our stereo Visual Odometry implementation.}
+    \label{fig:groundtruth}
+\end{figure} 
+
+   
+\begin{figure}    
+    \begin{subfigure}[b]{.45\textwidth}
+    \centering
+        \includegraphics[height=0.7\linewidth]{./vo_mono_3.png}
         \caption{}
         \label{fig:mono}
     \end{subfigure}
-    \begin{subfigure}[b]{.30\textwidth}
-        \includegraphics[width=\linewidth]{./mono-ba.png}
+    \begin{subfigure}[b]{.45\textwidth}
+    \centering
+        \includegraphics[height=0.7\linewidth]{./mono-ba.png}
         \caption{}
         \label{fig:monoba}
     \end{subfigure}
-    \caption{(a) Visual odometry using stereo based reconstruction (b) Using only monocular image pairs (c) Using monocular image pairs and bundle adjustment.}
+    \caption{Monocular Visual odometry (a) Using only monocular image pairs (b) Using monocular image pairs and bundle adjustment.}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=\textwidth]{./path}
+\caption{Visualization of monocular visual odometry along with its path. The green dots are the landmarks in the scene and the red frustum are the keyframe locations and the yellow camera frustrums are the intermediate frames}
+\label{fig:closeup}
 \end{figure}
 
 \subsection{Monocular visual odometry}
