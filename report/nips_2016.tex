@@ -264,12 +264,24 @@ After accounting for visibility of keypoints, our optimization has about fifteen
 \end{figure}
 
 \section{Results}
-So far, we have been working with the datasets available online. The results are illustrated on the Middlebury Temple dataset \cite{middlebury}. We first find the feature correspondences and then remove the outliers using Epipolar constraints. The outliers can be found by using a threshold on distance from epipolar line and along the epipolar line.
-
-We are able to recosntruct the temple structure using the two keyframes (handpicked for now). The results are shown in figure \ref{fig:reconstruction}. Once the reconstruction is done, we are able to recover the camera poses using PnP algorithm as illustrated in the figure \ref{fig:pose}. We are using OpenCV for feature matching and visualization.
+After implementing the above algorithms we were able to get a good localization of the camera on the KITTI datasets \citep{kitti}. The methods are eveluated against the ground truth qualitatively. The results are shown for the stereo, monocular and monocular with bundle-adjustment.
 
 \subsection{Stereo visual odometry}
-In steroscopic visual odometry, we used a stereo pair at every keyframe. The baseline between the stereo pair was about \textbf{WHAT} cm and this helped produce very accurate visual odometry.
+In steroscopic visual odometry, we used a stereo pair at every keyframe. The baseline between the stereo pair was about \textbf{0.54m} and this helped produce very accurate visual odometry. The reconstruction using the stereo pair is shown in the figure \ref{fig:reconstruction}. The stero reconstruction is better than the monocular reconstrctuction.
+
+\begin{figure}
+\begin{subfigure}{0.5\textwidth}
+\centering
+\includegraphics[height=0.5\textwidth]{./mono_reconstruction}
+\end{subfigure}
+\begin{subfigure}{0.5\textwidth}
+\centering
+\includegraphics[height=0.5\textwidth]{./stereo_reconstruction}
+\end{subfigure}
+\caption{(a) Monocular 3D reconstruction and (b) Stereo 3D reconstruction}
+\label{fig:reconstruction}
+\end{figure}
+
 
 We used this experiment as a baseline to test how good the monocular visual odometry is.
 
