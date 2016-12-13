@@ -1,4 +1,4 @@
-\begin{thebibliography}{10}
+\begin{thebibliography}{1}
 
 \bibitem{vo}
 O.~Naroditsky D.~Nister and J.~Bergen.
@@ -42,11 +42,6 @@ R.~I. Hartley and A.~Zisserman.
 Olga Sorkine-Hornung and Michael Rabinovich.
 \newblock Least-squares rigid motion using svd.
 \newblock 2016.
-
-\bibitem{middlebury}
-Unknown.
-\newblock Temple dataset.
-\newblock \url{http://vision.middlebury.edu/mview/data/}, 2004.
 
 \bibitem{threepoint}
 P.~Tanskanen F.~Fraundorfer and M.~Pollefeys.
