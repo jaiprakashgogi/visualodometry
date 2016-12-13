@@ -72,12 +72,12 @@
 \maketitle
 
 \begin{abstract}
-In this project, we localize the camera using visual odometry. The major component of the project is to generate keyframes according to pre-defined heuristics and triangulate the points to create 3D reconstruction of the scene. The poses of the intermediate frames can be found using Perspective-n-point algorithm. In addition, we also perform local bundle adjustment over last few frames so that the localization is locally consistent. The stereo mononocular performs the best and is close to the ground-truth when compared to the monocular visual odometry. We also plan to exploit the onboard inertial sensors to get prior for the localization.
+In this project, we localize the camera using visual odometry. The major component of the project is to generate keyframes according to pre-defined heuristics and triangulate the points to create 3D reconstruction of the scene. The poses of the intermediate frames can be found using Perspective-n-point algorithm. In addition, we also perform local bundle adjustment over last few frames so that the localization is locally consistent. The stereo mononocular performs the best and is close to the ground-truth when compared to the monocular visual odometry. 
 \end{abstract}
 
 \section{Introduction}
 
-Augmented reality has been around for years, yet not all problems are solved in the domain. One of the challenges is precise localization of the device in global coordinates. Augmented reality applications on smartphones are often based on markers. One good example of marker-based AR is Vuforia. On the other hand, there are standalone devices like Hololens, which has number of sensors to understand the scene and localize the head mounted display in the scene. Hololens like devices are globally consistent and performs full-fledge localization and mapping. However, we don't need to understand the scene in most of the cases.
+Augmented reality has been around for years, yet not all problems are solved in the domain. One of the challenges is precise localization of the device in global coordinates. Augmented reality applications on smartphones are often based on markers. One good example of marker-based AR is Vuforia. On the other hand, there are standalone devices like Hololens, which have a number of sensors to understand the scene and localize the head mounted display in the world. Hololens like devices are globally consistent and performs full-fledge localization and mapping. However, we don't need to understand the scene in many cases.
 
 There are applications where understanding the scene is not critical. Localizing the camera in the world is enough to solve certain problems. In this project we focus on localizing the camera using a sequential set of images.
 
@@ -85,7 +85,7 @@ There are applications where understanding the scene is not critical. Localizing
 \section{Background}
 The localization and mapping has been of great interest to reserachers over past three decades. The computer vision community has called them as structure from motion and the robotics community has be tackling the same problem using simultaneous localization and mapping (SLAM).
 
-\textbf{SFM}: In structure from motion algorithms, the goal is to generate the scene structure and localize camera positions for each image. The images are in no particular order and can be taken after several timesteps. This is usually an offline process and takes hours to get output and this is not intended to operate real-time.
+\textbf{SFM}: In structure from motion algorithms, the goal is to generate the scene structure and localize camera positions for each image. The images are in no particular order and can be taken after several timesteps. This is usually an offline process and takes hours to get output and this is not intended to operate in real-time.
 
 \textbf{Visual SLAM}: The focus in the visual SLAM techniques is both in reconstructing the scene and also localizing the camera in the scene. One distinction between SFM and SLAM is that the input images are sequential. This provides us with both challenges like short baselines and additional constraints on the system for faster optimization. Such system also aim to produce dense reconstructions and operate real-time.
 
@@ -269,7 +269,7 @@ After accounting for visibility of keypoints, our optimization has about fifteen
 After implementing the above algorithms we were able to get a good localization of the camera on the KITTI datasets \citep{kitti}. The methods are eveluated against the ground truth qualitatively. The results are shown for the stereo, monocular and monocular with bundle-adjustment.
 
 \subsection{Stereo visual odometry}
-In steroscopic visual odometry, we used a stereo pair at every keyframe. The baseline between the stereo pair was about \textbf{0.54m} and this helped produce very accurate visual odometry. The reconstruction using the stereo pair is shown in the figure \ref{fig:reconstruction}. The stero reconstruction is better than the monocular reconstrctuction.
+In stereoscopic visual odometry, we used a stereo pair at every keyframe. The baseline between the stereo pair was about \textbf{0.54m} and this helped produce very accurate visual odometry. The reconstruction using the stereo pair is shown in the figure \ref{fig:reconstruction}. The stereo reconstruction is better than the monocular reconstruction.
 
 \begin{figure}
 \begin{subfigure}{0.5\textwidth}
