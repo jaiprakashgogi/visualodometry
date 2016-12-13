@@ -151,14 +151,12 @@ Our first approach was to have every frame be a keyframe - this is expensive to 
 
 Another approach we considered was using a homography based test\cite{homography}. However, we found that the feature match count approach worked better for our dataset.
 
-\subsection{Three dimensional reconstruction}
-Using the feature matching, we can triagulate the points. The fundamental matrix gives the relationship between the feature points. We use a RANSAC based 8-point algorithm to find the fundamental matrix.
+\subsection{3D scene reconstruction}
+Using the feature matching, we can find the fundamental matrix. The fundamental matrix gives the relationship between the feature points. We use a RANSAC based 5-point algorithm to find the fundamental matrix.
 
 Using this fundamental matrix, we can estimate the camera pose between the two images. However, this gives rise to four possible camera configurations (with $W$/$W^T$ and $\pm t$) as described in \cite{Hartley2004}. The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
 
-We use 3D reconstruction in two modes: one with stereo image pairs and one with a monocular images. Reconstruction in both modes was successful. However, as hypothesized, we noticed qualititively that the monocular 3D reconstruction had more drift compared to the stereo reconstruction.
-
-We run 3D reconstruction only on keyframes. A new keyframe is created everytime the number of matches to the previous keyframe goes below a certain threshold. Currently, we use a threshold of 45\%. This results in a stable reconstruction and allows for registering the different pointclouds together as well.
+The triangulation can be done in two modes: one with stereo image pairs and one with a monocular images. Once a frame is labelled as a keyframe, we generate the reconstruction of the scene either by using the stereo pair or reconstruction using the previous keyframe in monocular case. Reconstruction in both modes was successful. However, as hypothesized, we noticed qualititively that the monocular 3D reconstruction had more drift compared to the stereo reconstruction.
 
 \begin{figure}
     \centering
@@ -178,12 +176,12 @@ We run 3D reconstruction only on keyframes. A new keyframe is created everytime 
 \subsection{Point cloud registration}
 As an image sequence proceeds, we use the current keyframe and the previous keyframe (or the current keyframe and the corresponding right-eye image in case of stereo) to reconstruct a point cloud based on feature matches. However, the point clouds might be of a different scale and would need to be registered to a global coordinate system.
 
-One approach to calculate the scale of the point cloud is to fit gaussian on the pairwise distances between 3D points. Using the mean of the distances in the local pointcloud and the global pointcloud, we can calculate the scale. Once we have the scale, we can compute the rotation and translation of the point cloud using the common feature points.
+One approach to calculate the scale of the point cloud is to fit gaussian to the scaling factors obtained by pairwise distances between 3D points in two point clouds. Using the mean of the distances in the local pointcloud and the global pointcloud, we can calculate the scale. Once we have the scale, we can compute the rotation and translation of the point cloud using the common feature points.
 
-To compute the rotation and translation, something here.
+To compute the rotation and translation, we use the method described in \citep{rigidbody}
 
 \begin{align*}
-    equation &= something
+    (R, t) = argmin_{R, t} \Sigma_{i=1}^n || (R \mathbf{p_i} + t ) - \mathbf{q_i}||^2 
 \end{align*}
 
 Another approach is to ensure that all projection matrices and transformations occur in one global frame of reference. We assume the first keyframe to be at the origin and chain transformations together to get the current pose.
