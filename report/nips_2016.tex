@@ -141,7 +141,7 @@ The second test is the \textbf{symmetry test} where we ensure that matches from 
 \begin{figure}
 \centering
 \includegraphics[width=0.5\textwidth]{./system_viz}
-\caption{Vizualization of the keyframes and the intermediate frames. The keyframes are used for 3D reconstruction and the pose of the intermediate frames are found using Perpective-n-point algorithm}
+\caption{Visualization of the keyframes and the intermediate frames. The keyframes are used for 3D reconstruction and the pose of the intermediate frames are found using Perpective-n-point algorithm}
 \label{fig:keyframing}
 \end{figure}
 
@@ -176,7 +176,7 @@ The triangulation can be done in two modes: one with stereo image pairs and one 
 \subsection{Point cloud registration}
 As an image sequence proceeds, we use the current keyframe and the previous keyframe (or the current keyframe and the corresponding right-eye image in case of stereo) to reconstruct a point cloud based on feature matches. However, the point clouds might be of a different scale and would need to be registered to a global coordinate system.
 
-One approach to calculate the scale of the point cloud is to fit gaussian to the scaling factors obtained by pairwise distances between 3D points in two point clouds. Using the mean of the distances in the local pointcloud and the global pointcloud, we can calculate the scale. Once we have the scale, we can compute the rotation and translation of the point cloud using the common feature points.
+One approach to calculate the scale of the point cloud is to fit gaussian to the scaling factors obtained by pairwise distances between 3D points in two point clouds. Using the mean of the distances in the local point cloud and the global point cloud, we can calculate the scale. Once we have the scale, we can compute the rotation and translation of the point cloud using the common feature points.
 
 To compute the rotation and translation, we use the method described in \citep{rigid}
 
