@@ -137,7 +137,7 @@ Another approach we considered was using a homography based test\cite{homography
 \subsection{Three dimensional reconstruction}
 Using the feature matching, we can triagulate the points. The fundamental matrix gives the relationship between the feature points. We use a RANSAC based 8-point algorithm to find the fundamental matrix.
 
-Using this fundamental matrix, we can estimate the camera pose between the two images. However, this gives rise to four possible camera configurations (with $W$/$W^T$ and $\pm t$). The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
+Using this fundamental matrix, we can estimate the camera pose between the two images. However, this gives rise to four possible camera configurations (with $W$/$W^T$ and $\pm t$) as described in \cite{Hartley2004}. The correct location can be found using the camera configuration in which all the points are in front of both the cameras.
 
 We use 3D reconstruction in two modes: one with stereo image pairs and one with a monocular images. Reconstruction in both modes was successful. However, as hypothesized, we noticed qualititively that the monocular 3D reconstruction had more drift compared to the stereo reconstruction.
 
